@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Form - Sample GitHub App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #F9F9F9;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 1em;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Form</h1>
+    <form action="/form" method="POST">
+      <label for="github-username">GitHub username:</label>
+      <input type="text" id="github-username" name="username" required>
+
+      <label for="email">Email:</label>
+      <input type="email" id="email" name="email" required>
+
+      <label for="terms">
+        <input type="checkbox" id="terms" name="terms" required>
+        I agree to the terms & conditions
+      </label>
+      
+      <button type="submit">Submit</button>
+    </form>
+  </div>
+</body>
+</html>
