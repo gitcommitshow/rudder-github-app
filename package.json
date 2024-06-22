@@ -1,7 +1,7 @@
 {
-  "name": "starter_github_app",
-  "private": true,
-  "version": "0.0.1",
+  "name": "rudder_github_app",
+  "private": false,
+  "version": "0.0.2",
   "type": "module",
   "scripts": {
     "lint": "standard",
@@ -15,5 +15,8 @@
   "dependencies": {
     "dotenv": "^16.0.3",
     "octokit": "^3.1.2"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
