@@ -40,6 +40,20 @@ export function isCLARequired(pullRequest) {
   return true;
 }
 
+export function isMessageAfterMergeRequired(pullRequest) {
+  if (isABot(pullRequest.user)) {
+    console.log("This PR is from a bot. So no message after merge required.");
+    return false;
+  }
+  if (!isExternalContribution(pullRequest)) {
+    console.log(
+      "This PR is an internal contribution. So no message after merge required.",
+    );
+    return false;
+  }
+  return true;
+}
+
 export function isExternalContribution(pullRequest) {
   if (
     pullRequest?.head?.repo?.full_name !== pullRequest?.base?.repo?.full_name
@@ -117,16 +131,33 @@ export async function afterCLA(app, claSignatureInfo) {
   }
 }
 
-export function getMessage(name, payload) {
+export function getMessage(name, context) {
   let message = "";
   switch (name) {
     case "ask-to-sign-cla":
       const CLA_LINK =
         process.env.WEBSITE_ADDRESS +
         "/cla" +
-        `?org=${payload.org}&repo=${payload.repo}&prNumber=${payload.pr_number}&username=${payload.username}`;
+        `?org=${context.org}&repo=${context.repo}&prNumber=${context.pr_number}&username=${context.username}`;
       message = `Thank you for contributing this PR.
       Please [sign the Contributor License Agreement (CLA)](${CLA_LINK}) before merging.`;
+      break;
+    case "message-after-merge":
+      message = `Thank you @${context.username} for contributing this PR.`;
+      if (
+        context.org === "rudderlabs" &&
+        context.repo === "rudder-transformer"
+      ) {
+        message += `For every new integration, a PR needs to be raised in [integartions-config](https://github.com/rudderlabs/rudder-integrations-config) repository as well.
+        Without it, users won't be able to configure the integration. 
+        This is a good time to do that.`;
+      }
+      if (
+        context.org === "rudderlabs" &&
+        context.repo === "integrations-config"
+      ) {
+        message += `To get notified when this integration goes live, join the **product-releases** channel in the [Slack Community](https://www.rudderstack.com/join-rudderstack-slack-community/)`;
+      }
       break;
     default:
       const filepath = resolve(PROJECT_ROOT_PATH, name + ".md");

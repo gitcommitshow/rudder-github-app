@@ -5,7 +5,11 @@ import url from "url";
 import { Octokit, App } from "octokit";
 import { createNodeMiddleware } from "@octokit/webhooks";
 import { routes } from "./src/routes.js";
-import { getMessage, isCLARequired } from "./src/helpers.js";
+import {
+  getMessage,
+  isCLARequired,
+  isMessageAfterMergeRequired,
+} from "./src/helpers.js";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -60,16 +64,17 @@ app.webhooks.on("pull_request.opened", async ({ octokit, payload }) => {
     }
     // If the user is not a member of the organization and haven't yet signed CLA,
     //  ask them to sign the CLA
+    const comment = getMessage("ask-to-sign-cla", {
+      username: payload.pull_request.user.login,
+      org: payload.repository.owner.login,
+      repo: payload.repository.name,
+      pr_number: payload.pull_request.number,
+    });
     await octokit.rest.issues.createComment({
       owner: payload.repository.owner.login,
       repo: payload.repository.name,
       issue_number: payload.pull_request.number,
-      body: getMessage("ask-to-sign-cla", {
-        username: payload.pull_request.user.login,
-        org: payload.repository.owner.login,
-        repo: payload.repository.name,
-        pr_number: payload.pull_request.number,
-      }),
+      body: comment,
     });
     // Add a label to the PR
     octokit.rest.issues.addLabels({
@@ -77,6 +82,40 @@ app.webhooks.on("pull_request.opened", async ({ octokit, payload }) => {
       repo: payload.repository.name,
       issue_number: payload.pull_request.number,
       labels: ["Pending CLA"],
+    });
+  } catch (error) {
+    if (error.response) {
+      console.error(
+        `Error! Status: ${error.response.status}. Message: ${error.response.data.message}`,
+      );
+    } else {
+      console.error(error);
+    }
+  }
+});
+
+app.webhooks.on("pull_request.closed", async ({ octokit, payload }) => {
+  console.log(
+    `Closed a pull request event for #${payload.pull_request.number}`,
+  );
+  if (!payload.pull_request.merged) return;
+  console.log(`This PR is merged`);
+  try {
+    if (!isMessageAfterMergeRequired()) {
+      return;
+    }
+    console.log(`Going to notify the PR author...`);
+    const comment = getMessage("message-after-merge", {
+      username: payload.pull_request.user.login,
+      org: payload.repository.owner.login,
+      repo: payload.repository.name,
+      pr_number: payload.pull_request.number,
+    });
+    await octokit.rest.issues.createComment({
+      owner: payload.repository.owner,
+      repo: payload.repository.name,
+      issue_number: payload.pull_request.number,
+      body: comment,
     });
   } catch (error) {
     if (error.response) {
