@@ -4,7 +4,7 @@
 
 This project uses GitHub issues to track bugs and feature requests. Please search the existing issues before filing new issues to avoid duplicates. For new issues, file your bug or feature request as a new issue.
 
-This project is not actively developed but is maintained by GitHub staff **AND THE COMMUNITY**. We will do our best to respond to support and community questions in a timely manner.
+This project is not actively developed but is maintained by **THE COMMUNITY**. We will do our best to respond to support and community questions in a timely manner.
 
 ## GitHub Support Policy
 
