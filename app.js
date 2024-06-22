@@ -151,7 +151,7 @@ http
         routes.cla(req, res);
         break;
       case "POST /cla":
-        routes.submitCla(req, res, app.octokit);
+        routes.submitCla(req, res, app);
         break;
       case "POST /api/webhook":
         middleware(req, res);

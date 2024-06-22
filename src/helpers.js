@@ -70,7 +70,20 @@ export async function isOrgMember(octokit, org, username) {
   }
 }
 
-export async function afterCLA(octokit, claSignatureInfo) {
+export async function getOctokitForRepo(app, owner, repo) {
+  for await (const { installation } of app.eachInstallation.iterator()) {
+    for await (const { octokit, repository } of app.eachRepository.iterator({
+      installationId: installation.id,
+    })) {
+      if (repository.owner.login === owner && repository.name === repo) {
+        return octokit;
+      }
+    }
+  }
+  throw new Error(`Installation not found for repository ${owner}/${repo}`);
+}
+
+export async function afterCLA(app, claSignatureInfo) {
   if (!claSignatureInfo || !claSignatureInfo.referrer) return;
   const { org, repo, prNumber } = parseUrlQueryParams(
     claSignatureInfo.referrer,
@@ -83,6 +96,7 @@ export async function afterCLA(octokit, claSignatureInfo) {
     return;
   }
   try {
+    let octokit = await getOctokitForRepo(app, org, repo);
     await octokit.rest.issues.removeLabel({
       owner: org,
       repo: repo,

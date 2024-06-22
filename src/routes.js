@@ -38,7 +38,7 @@ export const routes = {
     });
   },
 
-  submitCla(req, res, octokit) {
+  submitCla(req, res, app) {
     let body = "";
     req.on("data", (chunk) => {
       body += chunk.toString(); // convert Buffer to string
@@ -54,7 +54,7 @@ export const routes = {
       const serverTimestamp = new Date().toISOString();
       bodyJson.serverTimestamp = serverTimestamp;
       storage.save(bodyJson);
-      await afterCLA(octokit, bodyJson);
+      await afterCLA(app, bodyJson);
       // Referrer has information about which PR this CLA flow started from
       const { org, repo, prNumber } = parseUrlQueryParams(bodyJson.referrer);
       if (org && repo && prNumber) {
