@@ -101,7 +101,7 @@ app.webhooks.on("pull_request.closed", async ({ octokit, payload }) => {
   if (!payload.pull_request.merged) return;
   console.log(`This PR is merged`);
   try {
-    if (!isMessageAfterMergeRequired()) {
+    if (!isMessageAfterMergeRequired(payload.pull_request)) {
       return;
     }
     console.log(`Going to notify the PR author...`);
