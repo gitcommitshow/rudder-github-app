@@ -1,9 +1,11 @@
 import dotenv from "dotenv";
 import fs from "fs";
 import http from "http";
+import url from "url";
 import { Octokit, App } from "octokit";
 import { createNodeMiddleware } from "@octokit/webhooks";
-import { routes } from "./routes.js";
+import { routes } from "./src/routes.js";
+import { getMessage, isCLARequired } from "./src/helpers.js";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -26,7 +28,6 @@ const privateKey =
   );
 const secret = process.env.WEBHOOK_SECRET;
 const enterpriseHostname = process.env.ENTERPRISE_HOSTNAME;
-const messageForNewPRs = fs.readFileSync("./message.md", "utf8");
 
 // Create an authenticated Octokit client authenticated as a GitHub App
 const app = new App({
@@ -54,11 +55,28 @@ app.webhooks.on("pull_request.opened", async ({ octokit, payload }) => {
     `Received a pull request event for #${payload.pull_request.number}`,
   );
   try {
+    if (!isCLARequired(payload.pull_request)) {
+      return;
+    }
+    // If the user is not a member of the organization and haven't yet signed CLA,
+    //  ask them to sign the CLA
     await octokit.rest.issues.createComment({
       owner: payload.repository.owner.login,
       repo: payload.repository.name,
       issue_number: payload.pull_request.number,
-      body: messageForNewPRs,
+      body: getMessage("ask-to-sign-cla", {
+        username: payload.pull_request.user.login,
+        org: payload.repository.owner.login,
+        repo: payload.repository.name,
+        pr_number: payload.pull_request.number,
+      }),
+    });
+    // Add a label to the PR
+    octokit.rest.issues.addLabels({
+      owner: payload.repository.owner.login,
+      repo: payload.repository.name,
+      issue_number: payload.pull_request.number,
+      labels: ["Pending CLA"],
     });
   } catch (error) {
     if (error.response) {
@@ -72,7 +90,9 @@ app.webhooks.on("pull_request.opened", async ({ octokit, payload }) => {
 });
 
 app.webhooks.on("issues.opened", async ({ octokit, payload }) => {
-  console.log(`Received a new issue event for #${payload.issue.number}`);
+  console.log(
+    `Received a new issue event for #${payload.issue.number} by ${pull_request.user.type}: ${pull_request.user.login}`,
+  );
   try {
     await octokit.rest.issues.createComment({
       owner: payload.repository.owner.login,
@@ -118,15 +138,20 @@ const middleware = createNodeMiddleware(app.webhooks, { path });
 
 http
   .createServer((req, res) => {
-    switch (req.method + " " + req.url) {
+    const parsedUrl = url.parse(req.url);
+    const pathWithoutQuery = parsedUrl.pathname;
+    const queryString = parsedUrl.query;
+    console.log(req.method + " " + pathWithoutQuery);
+    if (queryString) console.log(queryString.substring(0, 20) + "...");
+    switch (req.method + " " + pathWithoutQuery) {
       case "GET /":
         routes.home(req, res);
         break;
-      case "GET /form":
-        routes.form(req, res);
+      case "GET /cla":
+        routes.cla(req, res);
         break;
-      case "POST /form":
-        routes.submitForm(req, res);
+      case "POST /cla":
+        routes.submitCla(req, res, app.octokit);
         break;
       case "POST /api/webhook":
         middleware(req, res);
