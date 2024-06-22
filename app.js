@@ -56,7 +56,7 @@ app.octokit.log.debug(`Authenticated as '${data.name}'`);
 // Subscribe to the "pull_request.opened" webhook event
 app.webhooks.on("pull_request.opened", async ({ octokit, payload }) => {
   console.log(
-    `Received a pull request event for #${payload.pull_request.number}`,
+    `Received a pull request event for #${payload.pull_request.number} by ${payload.pull_request.user.type}: ${payload.pull_request.user.login}`,
   );
   try {
     if (!isCLARequired(payload.pull_request)) {
@@ -101,7 +101,7 @@ app.webhooks.on("pull_request.closed", async ({ octokit, payload }) => {
   if (!payload.pull_request.merged) return;
   console.log(`This PR is merged`);
   try {
-    if (!isMessageAfterMergeRequired()) {
+    if (!isMessageAfterMergeRequired(payload.pull_request)) {
       return;
     }
     console.log(`Going to notify the PR author...`);
@@ -129,9 +129,7 @@ app.webhooks.on("pull_request.closed", async ({ octokit, payload }) => {
 });
 
 app.webhooks.on("issues.opened", async ({ octokit, payload }) => {
-  console.log(
-    `Received a new issue event for #${payload.issue.number} by ${pull_request.user.type}: ${pull_request.user.login}`,
-  );
+  console.log(`Received a new issue event for #${payload.issue.number}`);
   try {
     await octokit.rest.issues.createComment({
       owner: payload.repository.owner.login,

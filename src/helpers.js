@@ -41,7 +41,7 @@ export function isCLARequired(pullRequest) {
 }
 
 export function isMessageAfterMergeRequired(pullRequest) {
-  if (isABot(pullRequest.user)) {
+  if (isABot(pullRequest?.user)) {
     console.log("This PR is from a bot. So no message after merge required.");
     return false;
   }
