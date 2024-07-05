@@ -1,0 +1,17 @@
+version: '3'
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - APP_ID=123456 # Update with your GitHub app ID
+      - GITHUB_APP_PRIVATE_KEY_BASE64=LS0tHL.....o= # Update with your GitHub app private key (base64 encoded)
+      - WEBHOOK_SECRET=webhooksecret # Update with your GitHub webhook secretset in your GitHub app
+      - WEBSITE_ADDRESS=http://localhost:3000 # Update with your public website address
+
+  # To enable live code changes during development, attach current directory as volume
+  #  volumes:
+  #    - .:/home/node/rudder-github-app

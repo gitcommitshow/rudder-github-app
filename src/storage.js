@@ -4,6 +4,26 @@ import { resolve } from "path";
 import { PROJECT_ROOT_PATH } from "./helpers.js";
 
 const dbPath = process.env.DB_PATH || resolve(PROJECT_ROOT_PATH, "db.json");
+createFileIfMissing(dbPath);
+
+function createFileIfMissing(path){
+  try {
+    // Try to open the file in read-only mode
+    const fd = fs.openSync(path, 'r');
+    fs.closeSync(fd);
+    console.log('DB file exists at '+dbPath);
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      // If the file does not exist, create it
+      fs.writeFileSync(path, '[]', { flag: 'wx' }); // 'wx' flag ensures the file is created and not overwritten if it exists
+      console.log('DB file created at '+dbPath);
+    } else {
+      // Some other error occurred
+      console.error(err);
+      throw new Error("Failed to create the DB file at "+dbPath);
+    }
+  }
+}
 
 export const storage = {
   save(data) {
