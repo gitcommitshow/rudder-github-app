@@ -1,6 +1,4 @@
-# Sample GitHub App
-
-This sample app showcases how webhooks can be used with a GitHub App's installation token to create a bot that responds to issues. Code uses [octokit.js](https://github.com/octokit/octokit.js).
+## Bot to help with Open Source collaboration and maintenance
 
 ## Requirements
 
