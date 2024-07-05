@@ -4,23 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RudderStack Open Source Contributor Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/light.css">
   <style>
     body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #F9F9F9;
+      background-color: #F6F5F3;
     }
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 1em;
+    a {
+      text-decoration: none;
+      color: "#105ED5";
     }
-    h1 {
-      color: #333;
-    }
-    p {
-      color: #666;
+    a:visited {
+      color: "#ADC9FF";
     }
   </style>
 </head>
@@ -32,14 +26,25 @@
       All new contributors are required to sign the Contributor License Agreement (CLA) before merging PRs
       <br/><br/><br/>
       <a type="button" href="/cla">Sign CLA Now</a>
-      <br/><br/><br/><br/><br/><br/>
+      <br/><br/><br/><br/><br/>
       <hr/>
       Tools & resources for RudderStack contributors
       <ul>
-        <li>Contribution guide</li>
-        <li>Creating a new integration</li>
+        <li><a href="https://www.rudderstack.com/docs/resources/community/#contribute" target="_blank">Contribution guide</a></li>
+        <li><a href="https://www.rudderstack.com/docs/user-guides/how-to-guides/developing-integrations-for-rudderstack/" target="_blank">Create a new integration</a></li>
+        <li><a href="https://github.com/rudderlabs/rudder-server/discussions/new?category=feature-requests" target="_blank">Request a new feature</a></li>
+        <li><a href="https://rudderstack.com/join-rudderstack-slack-community" target="_blank">RudderStack community on Slack</a></li>
+        <li><a href="https://www.rudderstack.com/docs/releases/" target="_blank">Product release announcements</a></li>
       </ul>
     </p>
   </div>
 </body>
+<script type="module">
+  import { annotate } from 'https://unpkg.com/rough-notation?module';
+  const n1 = document.querySelector('a');
+  const a1 = annotate(n1, { type: 'highlight', color: '#C3E4CE' });
+  setTimeout(() => {
+    a1.show();
+  }, 3000);
+</script>
 </html>
