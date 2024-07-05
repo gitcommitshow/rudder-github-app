@@ -1,6 +1,13 @@
-# Sample GitHub App
+# Rudder GitHub App
 
-This sample app showcases how webhooks can be used with a GitHub App's installation token to create a bot that responds to issues. Code uses [octokit.js](https://github.com/octokit/octokit.js).
+A Node.js server for GitHub app to assist external contributors and save maintainers' time
+
+## Roadmap
+
+- [x] When an external contributor (not the internal team) raises a PR, post a comment to sign CLA and label PR `Pending CLA``
+- [x] On signing CLA, remove `Pending CLA`` label and never ask that user to sign the CLA again on any of our repo in future [DONE]
+- [x] On `rudder-transformer`` PR merge, post a comment to raise PR in `integrations-config`
+- [ ] On `integrations-config`` PR merge, psot a comment to join Slack's product-releases channel to get notified when that integration goes live
 
 ## Requirements
 
@@ -8,10 +15,10 @@ This sample app showcases how webhooks can be used with a GitHub App's installat
 - A GitHub App subscribed to **Pull Request** events and with the following permissions:
   - Pull requests: Read & write
   - Metadata: Read-only
-- (For local development) A tunnel to expose your local server to the internet (e.g. [smee](https://smee.io/), [ngrok](https://ngrok.com/) or [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/tunnel-guide/local/))
 - Your GitHub App Webhook must be configured to receive events at a URL that is accessible from the internet.
+- (Only for local development) A tunnel to expose your local server to the internet (e.g. [smee](https://smee.io/), [ngrok](https://ngrok.com/) or [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/tunnel-guide/local/))
 
-## Setup
+## Development setup
 
 1. Clone this repository.
 2. Create a `.env` file similar to `.env.example` and set actual values. If you are using GitHub Enterprise Server, also include a `ENTERPRISE_HOSTNAME` variable and set the value to the name of your GitHub Enterprise Server instance.
@@ -20,6 +27,19 @@ This sample app showcases how webhooks can be used with a GitHub App's installat
 5. Ensure your server is reachable from the internet.
     - If you're using `smee`, run `smee -u <smee_url> -t http://localhost:3000/api/webhook`.
 6. Ensure your GitHub App includes at least one repository on its installations.
+
+## Deployment
+
+### Using `Docker`
+
+1. [Register a GitHub app](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app) for your GitHub organization. Make sure to activate the webhook with webhook url `https://YOUR_WEBSITE/api/webhook` in your app with a secret. Enable Permissions & Events as you may need, at minimum pull_request and issue related events should be enabled.
+2. Install your GitHub app in all the repos where you need this app.
+3. Clone this repo
+4. Update `docker-compose.yml` environment variables with the details received from the step 2
+> To convert GitHub App's private key to base64, use this command - `openssl base64 -in /path/to/original-private-key.pem -out ./base64EncodedKey.txt -A`
+5. Run `docker-componse build` to build the service
+6. Run `docker-compose up` to create and start the container
+7. Test by visiting `http://localhost:3000`
 
 ## Usage
 
