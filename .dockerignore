@@ -1,0 +1,7 @@
+*
+!src
+!views
+!app.js
+!package*.json
+!tsconfig.json
+!test
