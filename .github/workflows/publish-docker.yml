@@ -10,6 +10,7 @@
 name: Publish Docker image
 
 on:
+  workflow_dispatch:
   release:
     types: [published]
 
@@ -51,6 +52,6 @@ jobs:
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+          subject-name: docker.io/gitcommitshow/rudder-github-app
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
