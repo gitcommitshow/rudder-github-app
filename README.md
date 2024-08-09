@@ -4,10 +4,10 @@ A Node.js server for GitHub app to assist external contributors and save maintai
 
 ## Roadmap
 
-- [x] When an external contributor (not the internal team) raises a PR, post a comment to sign CLA and label PR `Pending CLA``
-- [x] On signing CLA, remove `Pending CLA`` label and never ask that user to sign the CLA again on any of our repo in future [DONE]
-- [x] On `rudder-transformer`` PR merge, post a comment to raise PR in `integrations-config`
-- [ ] On `integrations-config`` PR merge, psot a comment to join Slack's product-releases channel to get notified when that integration goes live
+- [x] When an external contributor (not the internal team) raises a PR, post a comment to sign CLA and label PR `Pending CLA`
+- [x] On signing CLA, remove `Pending CLA` label and never ask that user to sign the CLA again on any of our repo in future
+- [x] On `rudder-transformer` PR merge, post a comment to raise PR in `integrations-config`
+- [ ] On `integrations-config` PR merge, psot a comment to join Slack's product-releases channel to get notified when that integration goes live
 
 ## Requirements
 
@@ -34,12 +34,12 @@ A Node.js server for GitHub app to assist external contributors and save maintai
 
 1. [Register a GitHub app](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app) for your GitHub organization. Make sure to activate the webhook with webhook url `https://YOUR_WEBSITE/api/webhook` in your app with a secret. Enable Permissions & Events as you may need, at minimum pull_request and issue related events should be enabled.
 2. Install your GitHub app in all the repos where you need this app.
-3. Clone this repo
+3. Clone this repo OR download the [`build/docker-compose.yml`](./build/docker-compose.yml) to install via dockerhub image
 4. Update `docker-compose.yml` environment variables with the details received from the step 2
 > To convert GitHub App's private key to base64, use this command - `openssl base64 -in /path/to/original-private-key.pem -out ./base64EncodedKey.txt -A`
 5. Run `docker-componse build` to build the service
 6. Run `docker-compose up` to create and start the container
-7. Test by visiting `http://localhost:3000`
+7. Test by visiting `http://localhost:3000` OR whatever `WEBSITE_ADDRESS` environment variable you've configured
 
 ## Usage
 
