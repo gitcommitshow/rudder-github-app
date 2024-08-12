@@ -33,6 +33,7 @@ export const storage = {
   },
   get(filters) {
     const currentData = JSON.parse(fs.readFileSync(dbPath, "utf8"));
+    if(!filters) return currentData;
     return currentData.filter((item) => {
       for (const [key, value] of Object.entries(filters)) {
         if (item[key] !== value) {

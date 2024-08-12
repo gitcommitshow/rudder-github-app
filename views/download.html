@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RudderStack Open Source Contributor Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/light.css">
+  <style>
+    body {
+      background-color: #F6F5F3;
+    }
+    a {
+      text-decoration: none;
+      color: "#105ED5";
+    }
+    a:visited {
+      color: "#ADC9FF";
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>⬇️ Download Center</h2>
+    <p>
+      <br/>
+      Contact admin for more details
+      <br/><br/><br/>
+      <form action="/download" method="post">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required><br><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required><br><br>
+        <label for="format">Format:</label>
+        <select id="format" name="format">
+            <option value="csv">CSV</option>
+            <option value="json">JSON</option>
+        </select><br><br>
+        <input type="submit" value="Download">
+      </form>
+      <br/><br/><br/><br/><br/>
+      <hr/>
+      <ul>
+        <li><a href="/">Home</a></li>
+      </ul>
+    </p>
+  </div>
+</body>
+</html>
