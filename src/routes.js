@@ -7,6 +7,8 @@ import {
   parseUrlQueryParams,
 } from "./helpers.js";
 import { resolve } from "path";
+import { jsonToCSV } from "./helpers.js";
+import { isPasswordValid } from "./auth.js";
 
 export const routes = {
   home(req, res) {
@@ -73,6 +75,53 @@ export const routes = {
       );
       return res.end();
     });
+  },
+
+  downloadCenter(req, res) {
+    const htmlPath = resolve(PROJECT_ROOT_PATH, "views", "download.html");
+    fs.readFile(htmlPath, function (err, data) {
+      if (err) {
+        res.writeHead(404);
+        res.write("Errors: File not found");
+        return res.end();
+      }
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.write(data);
+      return res.end();
+    });
+  },
+
+  download(req, res){
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk.toString(); // convert Buffer to string
+    });
+
+    req.on("end", async () => {
+      let bodyJson = queryStringToJson(body);
+      if(!bodyJson || !bodyJson['username'] || !bodyJson['password'] || !isPasswordValid(bodyJson['username'], bodyJson['password'])){
+        res.writeHead(404);
+        res.write("Not Authorized");
+        return res.end();
+      }
+      const jsonData = storage.get();
+      const format = bodyJson['format'];
+      if(format && format==='json'){
+        // Set headers for JSON file download
+        res.setHeader('Content-Disposition', 'attachment; filename=data.json');
+        res.setHeader('Content-Type', 'application/json');
+        // Convert JavaScript object to JSON string and send
+        const jsonString = JSON.stringify(jsonData, null, 2);
+        return res.end(jsonString);
+      }
+      // Send as csv format by default
+      // Set headers for CSV file download
+      res.setHeader('Content-Disposition', 'attachment; filename=data.csv');
+      res.setHeader('Content-Type', 'text/csv');
+      // Convert JavaScript object to CSV and send
+      const csvString = jsonToCSV(jsonData);
+      return res.end(csvString);
+    })
   },
 
   default(req, res) {

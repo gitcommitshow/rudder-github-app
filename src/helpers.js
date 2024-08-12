@@ -173,3 +173,28 @@ export function isCLASigned(username) {
   }
   return false;
 }
+
+export function jsonToCSV(arr) {
+  if (!arr || arr.length === 0) return '';
+
+  const headers = Object.keys(arr[0]);
+  const csvRows = [];
+
+  // Add headers
+  csvRows.push(headers.join(','));
+
+  // Add rows
+  for (const row of arr) {
+    const values = headers.map(header => {
+      const value = row[header];
+      // Handle nested objects and arrays
+      const escaped = typeof value === 'object' && value !== null 
+        ? JSON.stringify(value).replace(/"/g, '""')
+        : String(value).replace(/"/g, '""');
+      return `"${escaped}"`;
+    });
+    csvRows.push(values.join(','));
+  }
+
+  return csvRows.join('\n');
+}

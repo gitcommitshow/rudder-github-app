@@ -11,3 +11,5 @@ services:
       - GITHUB_APP_PRIVATE_KEY_BASE64=your_github_app_private_key_base64_encode # Replace this. First, get the private key from `GitHub Settings > Developer settings > GitHub Apps > {Your GitHub App} > Private Keys > Click(Generate Private Key)`. And then encode it to base64 using this command: `openssl base64 -in /path/to/original-private-key.pem -out ./base64EncodedKey.txt -A`
       - WEBHOOK_SECRET=the_secret_you_configured_for_webhook_in_your_github_app # Replace this
       - WEBSITE_ADDRESS=http://localhost:3000 # Replace this with your website domain name. It is recommended to use https, make sure to forward your your traffic on 443 to 3000 port(or whatever you configured earlier in environment.PORT) using reverse proxy such as nginx.
+      - LOGIN_USER=username # Replace with a memorable username
+      - LOGIN_PASSWORD=strongpassword # Replace with a strong long password

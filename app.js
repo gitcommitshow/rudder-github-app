@@ -187,6 +187,12 @@ http
       case "GET /cla":
         routes.cla(req, res);
         break;
+      case "GET /download":
+        routes.downloadCenter(req, res);
+        break;
+      case "POST /download":
+        routes.download(req, res);
+        break;
       case "POST /cla":
         routes.submitCla(req, res, app);
         break;
