@@ -11,6 +11,17 @@ import {
   isMessageAfterMergeRequired,
 } from "./src/helpers.js";
 
+try {
+  const packageJson = await import("./package.json", {
+    assert: { type: "json" },
+  });
+  var APP_VERSION = packageJson.default.version;
+} catch (err) {
+  console.error("Failed to get the version number");
+}
+console.log(`Application version: ${APP_VERSION}`);
+console.log(`Website address: ${process.env.WEBSITE_ADDRESS}`);
+
 // Load environment variables from .env file
 dotenv.config();
 
@@ -21,14 +32,14 @@ const appId = process.env.APP_ID;
 // Then set GITHUB_APP_PRIVATE_KEY_BASE64 environment variable with the value of ./base64EncodedKey.txt content
 const GITHUB_APP_PRIVATE_KEY = process.env.GITHUB_APP_PRIVATE_KEY_BASE64
   ? Buffer.from(process.env.GITHUB_APP_PRIVATE_KEY_BASE64, "base64").toString(
-      "utf8",
+      "utf8"
     )
   : null;
 const privateKey =
   GITHUB_APP_PRIVATE_KEY ||
   fs.readFileSync(
     process.env.PRIVATE_KEY_PATH || "./GITHUB_APP_PRIVATE_KEY.pem",
-    "utf8",
+    "utf8"
   );
 const secret = process.env.WEBHOOK_SECRET;
 const enterpriseHostname = process.env.ENTERPRISE_HOSTNAME;
@@ -56,26 +67,14 @@ app.octokit.log.debug(`Authenticated as '${data.name}'`);
 // Subscribe to the "pull_request.opened" webhook event
 app.webhooks.on("pull_request.opened", async ({ octokit, payload }) => {
   console.log(
-    `Received a pull request event for #${payload.pull_request.number} by ${payload.pull_request.user.type}: ${payload.pull_request.user.login}`,
+    `Received a pull request event for #${payload.pull_request.number} by ${payload.pull_request.user.type}: ${payload.pull_request.user.login}`
   );
   try {
     if (!isCLARequired(payload.pull_request)) {
+      console.log("CLA not required for this PR");
       return;
     }
     // If the user is not a member of the organization and haven't yet signed CLA,
-    //  ask them to sign the CLA
-    const comment = getMessage("ask-to-sign-cla", {
-      username: payload.pull_request.user.login,
-      org: payload.repository.owner.login,
-      repo: payload.repository.name,
-      pr_number: payload.pull_request.number,
-    });
-    await octokit.rest.issues.createComment({
-      owner: payload.repository.owner.login,
-      repo: payload.repository.name,
-      issue_number: payload.pull_request.number,
-      body: comment,
-    });
     // Add a label to the PR
     octokit.rest.issues.addLabels({
       owner: payload.repository.owner.login,
@@ -86,7 +85,40 @@ app.webhooks.on("pull_request.opened", async ({ octokit, payload }) => {
   } catch (error) {
     if (error.response) {
       console.error(
-        `Error! Status: ${error.response.status}. Message: ${error.response.data.message}`,
+        `Error! Status: ${error.response.status}. Message: ${error.response.data.message}`
+      );
+    } else {
+      console.error(error);
+    }
+  }
+});
+
+app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
+  const { number, pull_request, label, sender, repository, action } = payload;
+  console.log(
+    `Label #${label.name} ${action} by ${sender.login} on ${pull_request.issue_url} : ${pull_request.title}`
+  );
+  try {
+    if (label.name === "Pending CLA") {
+      console.log("Adding comment to the issue/PR to ask for CLA signature");
+      //  ask them to sign the CLA
+      const comment = getMessage("ask-to-sign-cla", {
+        username: pull_request.user.login,
+        org: repository.owner.login,
+        repo: repository.name,
+        pr_number: pull_request.number,
+      });
+      await octokit.rest.issues.createComment({
+        owner: repository.owner.login,
+        repo: repository.name,
+        issue_number: pull_request.number,
+        body: comment,
+      });
+    }
+  } catch (error) {
+    if (error.response) {
+      console.error(
+        `Error! Status: ${error.response.status}. Message: ${error.response.data.message}`
       );
     } else {
       console.error(error);
@@ -96,7 +128,7 @@ app.webhooks.on("pull_request.opened", async ({ octokit, payload }) => {
 
 app.webhooks.on("pull_request.closed", async ({ octokit, payload }) => {
   console.log(
-    `Closed a pull request event for #${payload.pull_request.number}`,
+    `Closed a pull request event for #${payload.pull_request.number}`
   );
   if (!payload.pull_request.merged) return;
   console.log(`This PR is merged`);
@@ -120,7 +152,7 @@ app.webhooks.on("pull_request.closed", async ({ octokit, payload }) => {
   } catch (error) {
     if (error.response) {
       console.error(
-        `Error! Status: ${error.response.status}. Message: ${error.response.data.message}`,
+        `Error! Status: ${error.response.status}. Message: ${error.response.data.message}`
       );
     } else {
       console.error(error);
@@ -140,7 +172,7 @@ app.webhooks.on("issues.opened", async ({ octokit, payload }) => {
   } catch (error) {
     if (error.response) {
       console.error(
-        `Error! Status: ${error.response.status}. Message: ${error.response.data.message}`,
+        `Error! Status: ${error.response.status}. Message: ${error.response.data.message}`
       );
     } else {
       console.error(error);
@@ -206,7 +238,7 @@ http
   .listen(port, () => {
     console.log(`Server is listening for events at: ${localWebhookUrl}`);
     console.log(
-      "Server is also serving the homepage at: http://localhost:" + port,
+      "Server is also serving the homepage at: http://localhost:" + port
     );
     console.log("Press Ctrl + C to quit.");
   });
