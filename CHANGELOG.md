@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/gitcommitshow/rudder-github-app/compare/v0.2.0...v0.3.0) (2024-08-15)
+
+
+### Features
+
+* allow adding cla label manually ([#43](https://github.com/gitcommitshow/rudder-github-app/issues/43)) ([962e75f](https://github.com/gitcommitshow/rudder-github-app/commit/962e75fbdf21ac202c2d11768ba648265897f6a5))
+
+
+### Bug Fixes
+
+* unnecessary line breaks ([#41](https://github.com/gitcommitshow/rudder-github-app/issues/41)) ([093880f](https://github.com/gitcommitshow/rudder-github-app/commit/093880fde68342c6b58364e31bd174dc89bd624d))
+
 ## [0.2.0](https://github.com/gitcommitshow/rudder-github-app/compare/v0.1.0...v0.2.0) (2024-08-12)
 
 
