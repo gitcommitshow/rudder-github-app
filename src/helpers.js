@@ -139,7 +139,7 @@ export function getMessage(name, context) {
         process.env.WEBSITE_ADDRESS +
         "/cla" +
         `?org=${context.org}&repo=${context.repo}&prNumber=${context.pr_number}&username=${context.username}`;
-      message = `Thank you for contributing this PR.
+      message = `Thank you @${context.username} for contributing this PR.
       Please [sign the Contributor License Agreement (CLA)](${CLA_LINK}) before merging.`;
       break;
     case "message-after-merge":
