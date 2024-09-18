@@ -97,40 +97,102 @@ export async function getOctokitForRepo(app, owner, repo) {
   throw new Error(`Installation not found for repository ${owner}/${repo}`);
 }
 
+/**
+ * This function is used to remove the "Pending CLA" label from the PRs of the user who has signed the CLA.
+ * @param {Object} app - The Octokit app instance.
+ * @param {Object} claSignatureInfo - The information about the CLA signature.
+ * @example
+ * const claSignatureInfo = {
+ *   referrer: "https://website.com/cla?org=rudderlabs&repo=rudder-server&prNumber=1234&username=githubUsername", // The URL of the page where the CLA was signed
+ *   username: "githubUsername" // The username of the user who signed the CLA,
+ * }
+ * await afterCLA(app, claSignatureInfo);
+ */
 export async function afterCLA(app, claSignatureInfo) {
-  if (!claSignatureInfo || !claSignatureInfo.referrer) return;
-  const { org, repo, prNumber } = parseUrlQueryParams(
-    claSignatureInfo.referrer,
-  );
-  console.log(
-    `PR related to the CLA - owner: ${org}, repo: ${repo}, prNumber: ${prNumber}`,
-  );
-  if (!org || !repo || !prNumber) {
-    console.log("Not enough info to find the related PR.");
+  const { org, username } = parseUrlQueryParams(claSignatureInfo?.referrer) || {};
+  const githubUsername = claSignatureInfo.username || username;
+  
+  if (!org || !githubUsername) {
+    console.log("Not enough info to find the related PRs.");
     return;
   }
+
+  console.log(`Processing CLA for ${githubUsername ? `user: ${githubUsername}` : 'unknown user'} in org/account: ${org}`);
+  
   try {
-    let octokit = await getOctokitForRepo(app, org, repo);
-    await octokit.rest.issues.removeLabel({
-      owner: org,
-      repo: repo,
-      issue_number: prNumber,
-      name: "Pending CLA",
-    });
-    console.log("Label 'Pending CLA' removed successfully.");
-  } catch (error) {
-    if (error.response) {
-      console.error(
-        `Error! Status: ${error.response.status}. Message: ${error.response.data.message}`,
-      );
-    } else {
-      console.error(error);
+    for await (const { installation } of app.eachInstallation.iterator()) {
+      for await (const { octokit, repository } of app.eachRepository.iterator({
+        installationId: installation.id,
+      })) {
+        console.log(`Processing repository: ${repository.name}`);
+        
+        // Check if the current repository belongs to the org
+        if (repository?.owner?.login?.toLowerCase() !== org?.toLowerCase()) {
+          console.log(`Skipping ${repository.name} as it doesn't belong to ${org}`);
+          continue;
+        }
+
+        // Get all open PRs for the user in this repository
+        try {
+          const prs = await octokit.paginate(octokit.rest.pulls.list, {
+            owner: org,
+            repo: repository.name,
+            state: 'open',
+            creator: githubUsername
+          });
+          console.log(`Found ${prs.length} open PRs for ${githubUsername} in ${repository.name}:`, prs.map(pr => pr.number).join(', '));
+          for (const pr of prs) {
+            await removePendingCLALabel(octokit, org, repository.name, pr.number);
+          }
+        } catch (error) {
+          if (error.status === 404) {
+            console.log(`Repository ${org}/${repository.name} not found or no access. Skipping.`);
+          } else {
+            console.error(`Error processing ${org}/${repository.name}:`, error.message);
+          }
+        }
+      }
     }
+  } catch (error) {
+    console.error("Error in afterCLA:", error);
   } finally {
     console.log("Completed post CLA verification tasks");
   }
 }
 
+async function removePendingCLALabel(octokit, owner, repo, issue_number) {
+  try {
+    console.log(`Removing label 'Pending CLA' from PR #${issue_number} in ${owner}/${repo}`);
+    await octokit.rest.issues.removeLabel({
+      owner,
+      repo,
+      issue_number,
+      name: "Pending CLA",
+    });
+    console.log(`Label 'Pending CLA' removed successfully from PR #${issue_number}.`);
+  } catch (labelError) {
+    if (labelError.status === 404) {
+      console.log(`Label 'Pending CLA' not found on PR #${issue_number}. Skipping.`);
+    } else {
+      console.error(`Error removing label from PR #${issue_number}:`, labelError.message);
+    }
+  }
+}
+
+/**
+ * This function is used to get the message string based on the name of the message template and the context.
+ * @param {string} name - The name of the message template.
+ * @param {Object} context - The context object containing variables for the message template.
+ * @returns {string} - The message string.
+ * @example
+ * const context = {
+ *   org: "rudderlabs",
+ *   repo: "rudder-server",
+ *   pr_number: 1234,
+ *   username: "githubUsername"
+ * }
+ * const message = getMessage("ask-to-sign-cla", context);
+ */
 export function getMessage(name, context) {
   let message = "";
   switch (name) {
