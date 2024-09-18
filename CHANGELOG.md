@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/gitcommitshow/rudder-github-app/compare/v0.3.0...v0.4.0) (2024-09-18)
+
+
+### Features
+
+* remove label for all prs after signing cla ([#47](https://github.com/gitcommitshow/rudder-github-app/issues/47)) ([e085a5e](https://github.com/gitcommitshow/rudder-github-app/commit/e085a5e2e5b3d1672a36754e483e3ea80396087a))
+
+
+### Bug Fixes
+
+* tag user in the comment to sign cla ([#44](https://github.com/gitcommitshow/rudder-github-app/issues/44)) ([2851b1d](https://github.com/gitcommitshow/rudder-github-app/commit/2851b1d8183df254a78e0bf310cb929e65d4751e))
+
 ## [0.3.0](https://github.com/gitcommitshow/rudder-github-app/compare/v0.2.0...v0.3.0) (2024-08-15)
 
 
