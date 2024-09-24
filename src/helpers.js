@@ -1,9 +1,6 @@
 import { storage } from "./storage.js";
-import { resolve, dirname } from "path";
-import url from "url";
-
-const __currentDir = dirname(url.fileURLToPath(import.meta.url)); // Path to directory of this file
-export const PROJECT_ROOT_PATH = resolve(__currentDir, ".."); // Assuming this file is located one folder under root
+import { resolve } from "path";
+import { PROJECT_ROOT_PATH } from "./config.js";
 
 export function parseUrlQueryParams(urlString) {
   const url = new URL(urlString);
@@ -120,6 +117,16 @@ export async function afterCLA(app, claSignatureInfo) {
   console.log(`Processing CLA for ${githubUsername ? `user: ${githubUsername}` : 'unknown user'} in org/account: ${org}`);
   
   try {
+    const query = `org:${org} is:pr is:open author:${githubUsername}`;
+    const { data: { items: prs } } = await app.octokit.rest.search.issuesAndPullRequests({
+      q: query,
+      sort: "updated",
+      order: "desc"
+    });
+
+    const filteredPrs = prs.filter(pr => pr.user.login === githubUsername);
+    console.log(`Found ${filteredPrs.length} open PRs for ${githubUsername} in ${org}:`, filteredPrs.map(pr => pr.number).join(', '));
+
     for await (const { installation } of app.eachInstallation.iterator()) {
       for await (const { octokit, repository } of app.eachRepository.iterator({
         installationId: installation.id,
@@ -132,29 +139,26 @@ export async function afterCLA(app, claSignatureInfo) {
           continue;
         }
 
-        // Get all open PRs for the user in this repository
-        try {
-          const prs = await octokit.paginate(octokit.rest.pulls.list, {
-            owner: org,
-            repo: repository.name,
-            state: 'open',
-            creator: githubUsername
-          });
-          console.log(`Found ${prs.length} open PRs for ${githubUsername} in ${repository.name}:`, prs.map(pr => pr.number).join(', '));
-          for (const pr of prs) {
-            await removePendingCLALabel(octokit, org, repository.name, pr.number);
-          }
-        } catch (error) {
-          if (error.status === 404) {
-            console.log(`Repository ${org}/${repository.name} not found or no access. Skipping.`);
-          } else {
-            console.error(`Error processing ${org}/${repository.name}:`, error.message);
+        // Process PRs for the current repository
+        for (const pr of filteredPrs) {
+          if (pr.repository?.name === repository.name) {
+            const hasPendingCLALabel = pr.labels?.some(label => label?.name?.toLowerCase() === "pending cla");
+            console.log(`PR #${pr.number} has "Pending CLA" label: ${hasPendingCLALabel}`);
+            if (hasPendingCLALabel) {
+              await removePendingCLALabel(octokit, org, repository.name, pr.number);
+            } else {
+              console.log(`PR #${pr.number} in ${org}/${repository.name} does not have "Pending CLA" label. Skipping.`);
+            }
           }
         }
       }
     }
   } catch (error) {
-    console.error("Error in afterCLA:", error);
+    if (error?.status === 403 && error?.message?.includes('rate limit')) {
+      console.error("Rate limit exceeded. Please try again later.");
+    } else {
+      console.error("Error in afterCLA:", error);
+    }
   } finally {
     console.log("Completed post CLA verification tasks");
   }

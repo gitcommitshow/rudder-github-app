@@ -1,7 +1,6 @@
 import fs from "fs";
 import { resolve } from "path";
-
-import { PROJECT_ROOT_PATH } from "./helpers.js";
+import { PROJECT_ROOT_PATH } from "./config.js";
 
 const dbPath = process.env.DB_PATH || resolve(PROJECT_ROOT_PATH, "db.json");
 createFileIfMissing(dbPath);
