@@ -3,9 +3,15 @@ import { resolve } from "path";
 import { PROJECT_ROOT_PATH } from "./config.js";
 
 export function parseUrlQueryParams(urlString) {
-  const url = new URL(urlString);
-  const params = new URLSearchParams(url.search);
-  return Object.fromEntries(params.entries());
+  if(!urlString) return urlString;
+  try{
+    const url = new URL(urlString);
+    const params = new URLSearchParams(url.search);
+    return Object.fromEntries(params.entries());
+  } catch(err){
+    console.error(err);
+    return
+  }
 }
 
 export function queryStringToJson(str) {

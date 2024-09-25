@@ -59,7 +59,7 @@ export const routes = {
       storage.save(bodyJson);
       await afterCLA(app, bodyJson);
       // Referrer has information about which PR this CLA flow started from
-      const { org, repo, prNumber } = parseUrlQueryParams(bodyJson.referrer);
+      const { org, repo, prNumber } = parseUrlQueryParams(bodyJson.referrer) || {};
       if (org && repo && prNumber) {
         // Redirect To PR
         const prLink = `https://github.com/${org}/${repo}/pull/${prNumber}`;
