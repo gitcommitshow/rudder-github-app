@@ -48,18 +48,23 @@ export const routes = {
     });
 
     req.on("end", async () => {
-      let bodyJson = queryStringToJson(body);
+      let { terms, username, email, referrer } = queryStringToJson(body) || {};
       const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
-      bodyJson.ip = ip;
-      if (!bodyJson.referrer && req.headers["referer"]) {
-        bodyJson.referrer = req.headers["referer"];
+      if (!referrer && req.headers["referer"]) {
+        referrer = req.headers["referer"];
       }
       const serverTimestamp = new Date().toISOString();
-      bodyJson.serverTimestamp = serverTimestamp;
-      storage.save(bodyJson);
-      await afterCLA(app, bodyJson);
+      if (!terms || terms !== "on" || !username) {
+        res.writeHead(302, {
+          Location: referrer || "/cla",
+        });
+        return res.end();
+      }
+      storage.save({ terms, username, email, ip, referrer, serverTimestamp });
+      //TODO: Handle UX after failure to remove the labels
+      await afterCLA(app, { terms, username, email, ip, referrer, serverTimestamp });
       // Referrer has information about which PR this CLA flow started from
-      const { org, repo, prNumber } = parseUrlQueryParams(bodyJson.referrer) || {};
+      const { org, repo, prNumber } = parseUrlQueryParams(referrer) || {};
       if (org && repo && prNumber) {
         // Redirect To PR
         const prLink = `https://github.com/${org}/${repo}/pull/${prNumber}`;
@@ -71,7 +76,7 @@ export const routes = {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       res.write(
         "<h1>CLA Signed successfully ☑️</h1>\n<pre>" +
-          JSON.stringify(bodyJson, null, 2) +
+        JSON.stringify({ terms, username, email, ip, referrer, serverTimestamp }, null, 2) +
           "</pre>",
       );
       return res.end();
