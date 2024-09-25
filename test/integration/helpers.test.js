@@ -41,6 +41,7 @@ describe('afterCLA', function() {
 
   it('should process CLA and remove "Pending CLA" label from PRs', async function() {
     // Mock the response from search.issuesAndPullRequests
+    // Docs for octokit.rest.search.issuesAndPullRequests - https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs/search/issuesAndPullRequests.md
     app.octokit.rest.search.issuesAndPullRequests.resolves({
       data: {
         items: [
@@ -92,6 +93,7 @@ describe('afterCLA', function() {
 
   it('should skip PRs without "Pending CLA" label', async function() {
     // Mock the response from search.issuesAndPullRequests
+    // Docs for octokit.rest.search.issuesAndPullRequests - https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs/search/issuesAndPullRequests.md
     app.octokit.rest.search.issuesAndPullRequests.resolves({
       data: {
         items: [

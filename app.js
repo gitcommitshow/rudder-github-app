@@ -108,6 +108,7 @@ app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
         repo: repository.name,
         pr_number: pull_request.number,
       });
+      // Docs for octokit.rest.issues.createComment - https://github.com/octokit/plugin-rest-endpoint-methods.js/blob/main/docs/issues/createComment.md
       await octokit.rest.issues.createComment({
         owner: repository.owner.login,
         repo: repository.name,
@@ -143,6 +144,7 @@ app.webhooks.on("pull_request.closed", async ({ octokit, payload }) => {
       repo: payload.repository.name,
       pr_number: payload.pull_request.number,
     });
+    // Docs for octokit.rest.issues.createComment - https://github.com/octokit/plugin-rest-endpoint-methods.js/blob/main/docs/issues/createComment.md
     await octokit.rest.issues.createComment({
       owner: payload.repository.owner,
       repo: payload.repository.name,
@@ -163,6 +165,7 @@ app.webhooks.on("pull_request.closed", async ({ octokit, payload }) => {
 app.webhooks.on("issues.opened", async ({ octokit, payload }) => {
   console.log(`Received a new issue event for #${payload.issue.number}`);
   try {
+    // Docs for octokit.rest.issues.createComment - https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs/issues/createComment.md 
     await octokit.rest.issues.createComment({
       owner: payload.repository.owner.login,
       repo: payload.repository.name,

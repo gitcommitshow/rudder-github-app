@@ -70,6 +70,7 @@ export function isABot(user) {
 export async function isOrgMember(octokit, org, username) {
   // Check if the is a member of the organization
   try {
+    // Docs for octokit.rest.orgs.checkMembershipForUser - https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs/orgs/checkMembershipForUser.md
     await octokit.rest.orgs.checkMembershipForUser({
       org,
       username,
@@ -118,6 +119,7 @@ export async function afterCLA(app, claSignatureInfo) {
   
   try {
     const query = `org:${org} is:pr is:open author:${githubUsername}`;
+    // GitHub Docs for octokit.rest.search - https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs/search
     const { data: { items: prs } } = await app.octokit.rest.search.issuesAndPullRequests({
       q: query,
       sort: "updated",
@@ -167,6 +169,7 @@ export async function afterCLA(app, claSignatureInfo) {
 async function removePendingCLALabel(octokit, owner, repo, issue_number) {
   try {
     console.log(`Removing label 'Pending CLA' from PR #${issue_number} in ${owner}/${repo}`);
+    // Docs for octokit.rest.issues.removeLabel - https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs/issues/removeLabel.md
     await octokit.rest.issues.removeLabel({
       owner,
       repo,
