@@ -40,14 +40,15 @@ describe('CLA Routes', function () {
             it('should return 200 status', async function () {
                 const res = await agent
                     .post('/cla')
-                    .send('terms=on&email=test@example.com&username=testGhUser');
+                    .send('terms=on&email=test@example.com&username=testGhUser')
+                    .redirects(0); // Do not follow redirect
                 expect(res).to.not.redirect;
             });
         });
         context("with valid input including valid referring pr info", function () {
             it('should return the CLA page', async function () {
                 const referrer = "https://localhost:3000/cla?org=Git-Commit-Show&repo=landing-page&prNumber=181&username=githubUsername";
-                const prReferrer = "https://github.com/Git-Commit-Show/repo=landing-page/pulls/181";
+                const prReferrer = "https://github.com/Git-Commit-Show/landing-page/pull/181";
                 const res = await agent
                     .post('/cla')
                     .send('terms=on&email=test@example.com&username=testGhUser&referrer='

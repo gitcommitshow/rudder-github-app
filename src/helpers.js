@@ -124,6 +124,7 @@ export async function afterCLA(app, claSignatureInfo) {
   console.log(`Processing CLA for ${githubUsername ? `user: ${githubUsername}` : 'unknown user'} in org/account: ${org}`);
   
   try {
+    // Query to find all open PRs created by githubUsername in all org repositories
     const query = `org:${org} is:pr is:open author:${githubUsername}`;
     // GitHub Docs for octokit.rest.search - https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs/search
     const { data: { items: prs } } = await app.octokit.rest.search.issuesAndPullRequests({
@@ -135,31 +136,16 @@ export async function afterCLA(app, claSignatureInfo) {
     const filteredPrs = prs.filter(pr => pr.user.login === githubUsername);
     console.log(`Found ${filteredPrs.length} open PRs for ${githubUsername} in ${org}:`, filteredPrs.map(pr => pr.number).join(', '));
 
-    for await (const { installation } of app.eachInstallation.iterator()) {
-      for await (const { octokit, repository } of app.eachRepository.iterator({
-        installationId: installation.id,
-      })) {
-        console.log(`Processing repository: ${repository.name}`);
-        
-        // Check if the current repository belongs to the org
-        if (repository?.owner?.login?.toLowerCase() !== org?.toLowerCase()) {
-          console.log(`Skipping ${repository.name} as it doesn't belong to ${org}`);
-          continue;
-        }
-
-        // Process PRs for the current repository
-        for (const pr of filteredPrs) {
-          if (pr.repository?.name === repository.name) {
-            const hasPendingCLALabel = pr.labels?.some(label => label?.name?.toLowerCase() === "pending cla");
-            console.log(`PR #${pr.number} has "Pending CLA" label: ${hasPendingCLALabel}`);
-            if (hasPendingCLALabel) {
-              await removePendingCLALabel(octokit, org, repository.name, pr.number);
-            } else {
-              console.log(`PR #${pr.number} in ${org}/${repository.name} does not have "Pending CLA" label. Skipping.`);
-            }
-          }
-        }
+    for (const pr of filteredPrs) {
+      const hasPendingCLALabel = pr.labels?.some(label => label?.name?.toLowerCase() === "pending cla");
+      console.log(`PR #${pr.number} has "Pending CLA" label: ${hasPendingCLALabel}`);
+      if (hasPendingCLALabel) {
+        await removePendingCLALabel(app.octokit, org, repository.name, pr.number);
+      } else {
+        console.log(`PR #${pr.number} in ${org}/${repository.name} does not have "Pending CLA" label. Skipping.`);
       }
+      //TODO: Add comment in PR: @contributor Thank you for signing CLA. @reviewers, you may go ahead with the review now.
+      //      Only if(filteredPrs.length<5) to avoid too many comments
     }
   } catch (error) {
     if (error?.status === 403 && error?.message?.includes('rate limit')) {
@@ -167,9 +153,9 @@ export async function afterCLA(app, claSignatureInfo) {
     } else {
       console.error("Error in afterCLA:", error);
     }
-  } finally {
-    console.log("Completed post CLA verification tasks");
+    throw new Error("Error in post CLA verification tasks such as removing Pending CLA labels")
   }
+  console.log("Completed post CLA verification tasks successfully");
 }
 
 async function removePendingCLALabel(octokit, owner, repo, issue_number) {
