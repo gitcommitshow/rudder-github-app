@@ -6,6 +6,7 @@ import { Octokit, App } from "octokit";
 import { createNodeMiddleware } from "@octokit/webhooks";
 import { routes } from "./src/routes.js";
 import {
+  verifyGitHubAppAuthenticationAndAccess,
   getMessage,
   isCLARequired,
   isMessageAfterMergeRequired,
@@ -57,6 +58,7 @@ const app = new App({
     }),
   }),
 });
+await verifyGitHubAppAuthenticationAndAccess(app);
 
 // Optional: Get & log the authenticated app's name
 const { data } = await app.octokit.request("/app");
@@ -202,11 +204,11 @@ app.webhooks.onError((error) => {
 
 // Launch a web server to listen for GitHub webhooks
 const port = process.env.PORT || 3000;
-const path = "/api/webhook";
-const localWebhookUrl = `http://localhost:${port}${path}`;
+const webhookPath = "/api/webhook";
+const localWebhookUrl = `http://localhost:${port}${webhookPath}`;
 
 // See https://github.com/octokit/webhooks.js/#createnodemiddleware for all options
-const middleware = createNodeMiddleware(app.webhooks, { path });
+const middleware = createNodeMiddleware(app.webhooks, { path: webhookPath });
 
 http
   .createServer((req, res) => {
