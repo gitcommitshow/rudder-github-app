@@ -1,14 +1,17 @@
 import { storage } from "./storage.js";
-import { resolve, dirname } from "path";
-import url from "url";
-
-const __currentDir = dirname(url.fileURLToPath(import.meta.url)); // Path to directory of this file
-export const PROJECT_ROOT_PATH = resolve(__currentDir, ".."); // Assuming this file is located one folder under root
+import { resolve } from "path";
+import { PROJECT_ROOT_PATH } from "./config.js";
 
 export function parseUrlQueryParams(urlString) {
-  const url = new URL(urlString);
-  const params = new URLSearchParams(url.search);
-  return Object.fromEntries(params.entries());
+  if(!urlString) return urlString;
+  try{
+    const url = new URL(urlString);
+    const params = new URLSearchParams(url.search);
+    return Object.fromEntries(params.entries());
+  } catch(err){
+    console.error(err);
+    return
+  }
 }
 
 export function queryStringToJson(str) {
@@ -73,6 +76,7 @@ export function isABot(user) {
 export async function isOrgMember(octokit, org, username) {
   // Check if the is a member of the organization
   try {
+    // Docs for octokit.rest.orgs.checkMembershipForUser - https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs/orgs/checkMembershipForUser.md
     await octokit.rest.orgs.checkMembershipForUser({
       org,
       username,
@@ -82,19 +86,6 @@ export async function isOrgMember(octokit, org, username) {
     console.log(err);
     return false;
   }
-}
-
-export async function getOctokitForRepo(app, owner, repo) {
-  for await (const { installation } of app.eachInstallation.iterator()) {
-    for await (const { octokit, repository } of app.eachRepository.iterator({
-      installationId: installation.id,
-    })) {
-      if (repository.owner.login === owner && repository.name === repo) {
-        return octokit;
-      }
-    }
-  }
-  throw new Error(`Installation not found for repository ${owner}/${repo}`);
 }
 
 /**
@@ -112,7 +103,7 @@ export async function afterCLA(app, claSignatureInfo) {
   const { org, username } = parseUrlQueryParams(claSignatureInfo?.referrer) || {};
   const githubUsername = claSignatureInfo.username || username;
   
-  if (!org || !githubUsername) {
+  if (!org || !githubUsername || !app) {
     console.log("Not enough info to find the related PRs.");
     return;
   }
@@ -120,49 +111,54 @@ export async function afterCLA(app, claSignatureInfo) {
   console.log(`Processing CLA for ${githubUsername ? `user: ${githubUsername}` : 'unknown user'} in org/account: ${org}`);
   
   try {
-    for await (const { installation } of app.eachInstallation.iterator()) {
-      for await (const { octokit, repository } of app.eachRepository.iterator({
-        installationId: installation.id,
-      })) {
-        console.log(`Processing repository: ${repository.name}`);
-        
-        // Check if the current repository belongs to the org
-        if (repository?.owner?.login?.toLowerCase() !== org?.toLowerCase()) {
-          console.log(`Skipping ${repository.name} as it doesn't belong to ${org}`);
-          continue;
-        }
+    //TODO: Check if the Octokit instance is already authenticated with an installation ID
+    const octokit = await getOctokitForOrg(app, org);
+    // Query to find all open PRs created by githubUsername in all org repositories
+    const query = `org:${org} is:pr is:open author:${githubUsername}`;
+    // GitHub Docs for octokit.rest.search - https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs/search
+    const { data: { items: prs } } = await octokit.rest.search.issuesAndPullRequests({
+      q: query,
+      sort: "updated",
+      order: "desc"
+    });
 
-        // Get all open PRs for the user in this repository
+    const filteredPrs = prs?.filter(pr => pr.user.login === githubUsername);
+    console.log(`Found ${filteredPrs?.length} open PRs for ${githubUsername} in ${org}:`, filteredPrs?.map(pr => pr.number).join(', '));
+    let failuresToRemoveLabel = 0;
+    for (const pr of filteredPrs) {
+      const { owner, repo } = parseRepoUrl(pr?.repository_url) || {};
+      const hasPendingCLALabel = pr.labels?.some(label => label?.name?.toLowerCase() === "pending cla");
+      console.log(`PR #${pr.number} has "Pending CLA" label: ${hasPendingCLALabel}`);
+      if (hasPendingCLALabel) {
         try {
-          const prs = await octokit.paginate(octokit.rest.pulls.list, {
-            owner: org,
-            repo: repository.name,
-            state: 'open',
-            creator: githubUsername
-          });
-          console.log(`Found ${prs.length} open PRs for ${githubUsername} in ${repository.name}:`, prs.map(pr => pr.number).join(', '));
-          for (const pr of prs) {
-            await removePendingCLALabel(octokit, org, repository.name, pr.number);
-          }
-        } catch (error) {
-          if (error.status === 404) {
-            console.log(`Repository ${org}/${repository.name} not found or no access. Skipping.`);
-          } else {
-            console.error(`Error processing ${org}/${repository.name}:`, error.message);
-          }
+          await removePendingCLALabel(octokit, owner, repo, pr?.number);
+        } catch (err) {
+          failuresToRemoveLabel++;
         }
+      } else {
+        console.log(`PR #${pr?.number} in ${owner}/${repo} does not have "Pending CLA" label. Skipping.`);
       }
+      //TODO: Add comment in PR: @contributor Thank you for signing CLA. @reviewers, you may go ahead with the review now.
+      //      Only if(filteredPrs.length<5) to avoid too many comments
     }
   } catch (error) {
-    console.error("Error in afterCLA:", error);
-  } finally {
-    console.log("Completed post CLA verification tasks");
+    if (error?.status === 403 && error?.message?.includes('rate limit')) {
+      console.error("Rate limit exceeded. Please try again later.");
+    } else {
+      console.error("Error in afterCLA:", error);
+    }
+    throw new Error("Error in post CLA verification tasks such as removing Pending CLA labels")
   }
+  if (failuresToRemoveLabel > 0) {
+    throw new Error("Failure to remove labels in some repos")
+  }
+  console.log("Completed post CLA verification tasks successfully");
 }
 
 async function removePendingCLALabel(octokit, owner, repo, issue_number) {
   try {
     console.log(`Removing label 'Pending CLA' from PR #${issue_number} in ${owner}/${repo}`);
+    // Docs for octokit.rest.issues.removeLabel - https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs/issues/removeLabel.md
     await octokit.rest.issues.removeLabel({
       owner,
       repo,
@@ -173,9 +169,13 @@ async function removePendingCLALabel(octokit, owner, repo, issue_number) {
   } catch (labelError) {
     if (labelError.status === 404) {
       console.log(`Label 'Pending CLA' not found on PR #${issue_number}. Skipping.`);
+    } else if (labelError.status === 403) {
+      console.log(`Not permitted to remove label in ${owner}/${repo}.`);
+      console.error(`Please install the GitHub app in ${owner}/${repo}.`);
     } else {
       console.error(`Error removing label from PR #${issue_number}:`, labelError.message);
     }
+    throw new Error("Error in removing 'Pending CLA' label")
   }
 }
 
@@ -259,4 +259,78 @@ export function jsonToCSV(arr) {
   }
 
   return csvRows.join('\n');
+}
+
+export async function getOctokitForOrg(app, org) {
+  // Find the installation for the organization
+  for await (const { installation } of app.eachInstallation.iterator()) {
+    if (installation.account.login.toLowerCase() === org.toLowerCase()) {
+      // Create an authenticated client for this installation
+      const octokit = await app.getInstallationOctokit(installation.id);
+      return octokit
+    }
+  }
+}
+
+export async function verifyGitHubAppAuthenticationAndAccess(app) {
+  console.log("Verifying GitHub App authentication and access...");
+
+  try {
+    // Verify app installation
+    for await (const { installation } of app.eachInstallation.iterator()) {
+      console.log(`\nChecking installation for ${installation.account.login} (${installation.account.type}):`);
+
+      // Create an authenticated client for this installation
+      const octokit = await app.getInstallationOctokit(installation.id);
+
+      // List repositories the app can access in this installation
+      const repos = await octokit.rest.apps.listReposAccessibleToInstallation();
+      console.log(`- Has access to ${repos.data.repositories.length} repositories:`);
+      repos.data.repositories.forEach(repo => {
+        console.log(`  - ${repo.full_name}`);
+      });
+
+      // List the permissions the app has for this installation
+      console.log("- App permissions:");
+      Object.entries(installation.permissions).forEach(([key, value]) => {
+        console.log(`  - ${key}: ${value}`);
+      });
+    }
+    console.log("\nAuthentication and access verification completed successfully.");
+  } catch (error) {
+    console.error("Error during authentication and access verification:", error);
+    if (error.status === 401) {
+      console.error("Authentication failed. Please check your app credentials (appId and privateKey).");
+    } else if (error.status === 403) {
+      console.error("Authorization failed. The app might not have the required permissions.");
+    } else {
+      console.error("An unexpected error occurred:", error.message);
+    }
+  }
+}
+
+/**
+ * Parses a repository URL to extract the owner and repository name.
+ * Supports HTTPS, Git protocol URLs, and API urls
+ * @param {string} repoUrl - The repository URL.
+ * @returns {object|null} - An object with owner and repo, or null if parsing fails.
+ */
+function parseRepoUrl(repoUrl) {
+  try {
+    const url = new URL(repoUrl);
+
+    // Extract pathname and split into segments
+    // e.g. https://api.github.com/repos/Git-Commit-Show/gcs-cli
+    const pathname = url.pathname.replace(/\.git$/, ''); // Remove .git suffix if present
+    const segments = pathname.split('/').filter(segment => segment.length > 0);
+
+    if (segments.length < 2) {
+      return null; // Not enough segments to determine owner and repo
+    }
+
+    return { owner: segments[segments.length - 2], repo: segments[segments.length - 1] };
+  } catch (error) {
+    // Handle cases where URL constructor fails (e.g., SSH URLs)
+    return null;
+  }
 }

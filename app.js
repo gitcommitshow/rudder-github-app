@@ -6,6 +6,7 @@ import { Octokit, App } from "octokit";
 import { createNodeMiddleware } from "@octokit/webhooks";
 import { routes } from "./src/routes.js";
 import {
+  verifyGitHubAppAuthenticationAndAccess,
   getMessage,
   isCLARequired,
   isMessageAfterMergeRequired,
@@ -57,6 +58,7 @@ const app = new App({
     }),
   }),
 });
+await verifyGitHubAppAuthenticationAndAccess(app);
 
 // Optional: Get & log the authenticated app's name
 const { data } = await app.octokit.request("/app");
@@ -108,6 +110,7 @@ app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
         repo: repository.name,
         pr_number: pull_request.number,
       });
+      // Docs for octokit.rest.issues.createComment - https://github.com/octokit/plugin-rest-endpoint-methods.js/blob/main/docs/issues/createComment.md
       await octokit.rest.issues.createComment({
         owner: repository.owner.login,
         repo: repository.name,
@@ -143,6 +146,7 @@ app.webhooks.on("pull_request.closed", async ({ octokit, payload }) => {
       repo: payload.repository.name,
       pr_number: payload.pull_request.number,
     });
+    // Docs for octokit.rest.issues.createComment - https://github.com/octokit/plugin-rest-endpoint-methods.js/blob/main/docs/issues/createComment.md
     await octokit.rest.issues.createComment({
       owner: payload.repository.owner,
       repo: payload.repository.name,
@@ -163,6 +167,7 @@ app.webhooks.on("pull_request.closed", async ({ octokit, payload }) => {
 app.webhooks.on("issues.opened", async ({ octokit, payload }) => {
   console.log(`Received a new issue event for #${payload.issue.number}`);
   try {
+    // Docs for octokit.rest.issues.createComment - https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs/issues/createComment.md 
     await octokit.rest.issues.createComment({
       owner: payload.repository.owner.login,
       repo: payload.repository.name,
@@ -199,11 +204,11 @@ app.webhooks.onError((error) => {
 
 // Launch a web server to listen for GitHub webhooks
 const port = process.env.PORT || 3000;
-const path = "/api/webhook";
-const localWebhookUrl = `http://localhost:${port}${path}`;
+const webhookPath = "/api/webhook";
+const localWebhookUrl = `http://localhost:${port}${webhookPath}`;
 
 // See https://github.com/octokit/webhooks.js/#createnodemiddleware for all options
-const middleware = createNodeMiddleware(app.webhooks, { path });
+const middleware = createNodeMiddleware(app.webhooks, { path: webhookPath });
 
 http
   .createServer((req, res) => {

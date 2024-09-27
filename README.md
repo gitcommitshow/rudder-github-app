@@ -5,9 +5,10 @@ A Node.js server for GitHub app to assist external contributors and save maintai
 ## Roadmap
 
 - [x] When an external contributor (not the internal team) raises a PR, post a comment to sign CLA and label PR `Pending CLA`
-- [x] On signing CLA, remove `Pending CLA` label and never ask that user to sign the CLA again on any of our repo in future
+- [x] On signing CLA, remove `Pending CLA` label from all the PRs of that user. Never ask that user to sign the CLA on any of our repo in future
 - [x] On `rudder-transformer` PR merge, post a comment to raise PR in `integrations-config`
 - [ ] On `integrations-config` PR merge, psot a comment to join Slack's product-releases channel to get notified when that integration goes live
+- [ ] On `integrations-config` PR merge, post a comment to raise PR in `rudder-docs`
 
 ## Requirements
 
@@ -61,3 +62,8 @@ by major cloud providers:
 [AWS Secrets Manager](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-secrets-manager/),
 [Google Secret Manager](https://cloud.google.com/nodejs/docs/reference/secret-manager/latest),
 etc.
+
+## References
+
+- [Docs - octokit.rest.* methods](https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs)
+- [Docs - GitHub API](https://docs.github.com/en/rest)
