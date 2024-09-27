@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/gitcommitshow/rudder-github-app/compare/v0.4.1...v0.4.2) (2024-09-27)
+
+
+### Bug Fixes
+
+* missed null checks ([#54](https://github.com/gitcommitshow/rudder-github-app/issues/54)) ([2739f74](https://github.com/gitcommitshow/rudder-github-app/commit/2739f74455880a56448aa1bbc6f2d9fdfb003aa2))
+
 ## [0.4.1](https://github.com/gitcommitshow/rudder-github-app/compare/v0.4.0...v0.4.1) (2024-09-27)
 
 
