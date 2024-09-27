@@ -138,7 +138,7 @@ export async function afterCLA(app, claSignatureInfo) {
       } else {
         console.log(`PR #${pr?.number} in ${owner}/${repo} does not have "Pending CLA" label. Skipping.`);
       }
-      //TODO: Add comment in PR: @contributor Thank you for signing CLA. @reviewers, you may go ahead with the review now.
+      //TODO: Add comment in PR: Thank you @contributor for signing the CLA. @reviewers, you may go ahead with the review now.
       //      Only if(filteredPrs.length<5) to avoid too many comments
     }
   } catch (error) {
