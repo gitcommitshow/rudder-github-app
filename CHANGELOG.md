@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/gitcommitshow/rudder-github-app/compare/v0.4.0...v0.4.1) (2024-09-27)
+
+
+### Bug Fixes
+
+* minor comment grammar ([#52](https://github.com/gitcommitshow/rudder-github-app/issues/52)) ([1196c5a](https://github.com/gitcommitshow/rudder-github-app/commit/1196c5a4cf9e4a3a410298e4e0270e35346d753b))
+
 ## [0.4.0](https://github.com/gitcommitshow/rudder-github-app/compare/v0.3.0...v0.4.0) (2024-09-18)
 
 
