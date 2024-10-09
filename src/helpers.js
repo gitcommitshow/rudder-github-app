@@ -60,10 +60,14 @@ export function isMessageAfterMergeRequired(pullRequest) {
 }
 
 export function isExternalContribution(pullRequest) {
-  if (
-    pullRequest?.head?.repo?.full_name !== pullRequest?.base?.repo?.full_name
-  ) {
+  if (pullRequest?.head?.repo?.full_name !== pullRequest?.base?.repo?.full_name) {
     return true;
+  } else if (pullRequest?.author_association?.toUpperCase() === 'NONE') {
+    // They have neither been the owner, member, collborater, nor they have contributed in the past
+    return true
+  } else if (pullRequest?.author_association?.toUpperCase() === 'CONTRIBUTOR') {
+    // They have contributed in the past (at least in the past as contributor)
+    return true
   }
   return false;
 }
@@ -231,6 +235,7 @@ export function getMessage(name, context) {
 }
 
 export function isCLASigned(username) {
+  if (!username) return
   const userData = storage.get({ username: username, terms: "on" });
   if (userData?.length > 0) {
     return true;
@@ -344,21 +349,62 @@ export async function getOpenPullRequests(app, owner, repo) {
     console.error("Failed to search PR because of undefined octokit intance")
     return
   }
-  const query = `is:pr is:open -author:dependabot[bot]` + (repo ? ` repo:${owner / repo}` : ` org:${owner}`);
+  const query = `is:pr is:open -author:dependabot[bot]` + (repo ? ` repo:${owner + "/" + repo}` : ` org:${owner}`);
   const response = await octokit.rest.search.issuesAndPullRequests({
     q: query,
     sort: 'created',
     order: 'desc'
   });
+  console.log(response?.data.total_count + " results found for search: " + query);
   const humanPRs = response.data.items.filter(pr => pr.user && pr.user.type === 'User');
   return humanPRs;
 }
 
 export async function getOpenExternalPullRequests(app, owner, repo) {
-  const openPRs = await getOpenPullRequests(app, owner, repo);
-  if (Array.isArray(openPRs)) {
+  try {
+    const openPRs = await getOpenPullRequests(app, owner, repo);
+    if (!Array.isArray(openPRs)) {
+      return;
+    }
     // Send only the external PRs
-    return openPRs?.filter((pr) => isExternalContribution(pr))
+    const openExternalPRs = openPRs?.filter((pr) => isExternalContribution(pr))
+    return openExternalPRs
+  } catch (err) {
+    return
   }
-  return
+}
+
+export function timeAgo(date) {
+  if (!date) return '';
+  if (typeof date === 'string') {
+    date = new Date(date);
+  }
+  const now = new Date();
+  const seconds = Math.floor((now - date) / 1000);
+  let interval = Math.floor(seconds / 31536000);
+
+  if (interval > 1) {
+    return `${interval} years ago`;
+  }
+  interval = Math.floor(seconds / 2592000);
+  if (interval > 1) {
+    return `${interval} months ago`;
+  }
+  interval = Math.floor(seconds / 604800);
+  if (interval > 1) {
+    return `${interval} weeks ago`;
+  }
+  interval = Math.floor(seconds / 86400);
+  if (interval > 1) {
+    return `${interval} days ago`;
+  }
+  interval = Math.floor(seconds / 3600);
+  if (interval > 1) {
+    return `${interval} hours ago`;
+  }
+  interval = Math.floor(seconds / 60);
+  if (interval > 1) {
+    return `${interval} minutes ago`;
+  }
+  return `${seconds} seconds ago`;
 }
