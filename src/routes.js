@@ -9,6 +9,7 @@ import {
   queryStringToJson,
   parseUrlQueryParams,
   jsonToCSV,
+  getOpenExternalPullRequests,
 } from "./helpers.js";
 import { isPasswordValid } from "./auth.js";
 
@@ -164,6 +165,30 @@ export const routes = {
       const csvString = jsonToCSV(jsonData);
       return res.end(csvString);
     })
+  },
+
+  syncPullRequests(req, res, app) {
+    if (err) {
+      res.writeHead(404);
+      res.write("Not implemented yet");
+      return res.end();
+    }
+    res.writeHead(302, {
+      Location: "/pr",
+    });
+    return res.end();
+  },
+
+  async listPullRequests(req, res, app) {
+    const { org, repo } = parseUrlQueryParams(req.url) || {};
+    if (!org) {
+      res.writeHead(400);
+      return res.end("Please add org parameter in the url e.g. ?org=my-github-org-name");
+    }
+    const prList = await getOpenExternalPullRequests(app, org, repo);
+    res.setHeader('Content-Type', 'application/json');
+    const jsonString = prList ? JSON.stringify(prList, null, 2) : ("No Open Pull Requests found (or you don't have access to search PRs for " + org);
+    return res.end(jsonString);
   },
 
   default(req, res) {

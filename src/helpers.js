@@ -1,12 +1,14 @@
 import { storage } from "./storage.js";
 import { resolve } from "path";
 import { PROJECT_ROOT_PATH } from "./config.js";
+import url from "node:url";
 
 export function parseUrlQueryParams(urlString) {
   if(!urlString) return urlString;
   try{
-    const url = new URL(urlString);
-    const params = new URLSearchParams(url.search);
+    const parsedUrl = url.parse(urlString)
+    const query = parsedUrl.query;
+    const params = new URLSearchParams(query);
     return Object.fromEntries(params.entries());
   } catch(err){
     console.error(err);
@@ -270,6 +272,7 @@ export async function getOctokitForOrg(app, org) {
       return octokit
     }
   }
+  console.error("No GitHub App installation found for " + org);
 }
 
 export async function verifyGitHubAppAuthenticationAndAccess(app) {
@@ -333,4 +336,29 @@ function parseRepoUrl(repoUrl) {
     // Handle cases where URL constructor fails (e.g., SSH URLs)
     return null;
   }
+}
+
+export async function getOpenPullRequests(app, owner, repo) {
+  const octokit = await getOctokitForOrg(app, owner);
+  if (!octokit) {
+    console.error("Failed to search PR because of undefined octokit intance")
+    return
+  }
+  const query = `is:pr is:open -author:dependabot[bot]` + (repo ? ` repo:${owner / repo}` : ` org:${owner}`);
+  const response = await octokit.rest.search.issuesAndPullRequests({
+    q: query,
+    sort: 'created',
+    order: 'desc'
+  });
+  const humanPRs = response.data.items.filter(pr => pr.user && pr.user.type === 'User');
+  return humanPRs;
+}
+
+export async function getOpenExternalPullRequests(app, owner, repo) {
+  const openPRs = await getOpenPullRequests(app, owner, repo);
+  if (Array.isArray(openPRs)) {
+    // Send only the external PRs
+    return openPRs?.filter((pr) => isExternalContribution(pr))
+  }
+  return
 }
