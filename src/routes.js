@@ -182,12 +182,12 @@ export const routes = {
   },
 
   async listPullRequests(req, res, app) {
-    const { org, repo } = parseUrlQueryParams(req.url) || {};
+    const { org, repo, page } = parseUrlQueryParams(req.url) || {};
     if (!org) {
       res.writeHead(400);
       return res.end("Please add org parameter in the url e.g. ?org=my-github-org-name");
     }
-    const prs = await getOpenExternalPullRequests(app, org, repo);
+    const prs = await getOpenExternalPullRequests(app, org, repo, { page: page });
     if (req.headers['content-type']?.toLowerCase() === 'application/json') {
       res.setHeader('Content-Type', 'application/json');
       const jsonString = prs ? JSON.stringify(prs, null, 2) : ("No Open Pull Requests found (or you don't have access to search PRs for " + org);
@@ -209,7 +209,7 @@ export const routes = {
                   <body>
                       <h1>Recent Contributions (Open)</h1>
                       <div class="tabs">
-                          ${Array.isArray(prs) && prs.length > 0 ? `<button class="tab-button" onclick="switchView('byUser')">Group by User</button><button class="tab-button" onclick="switchView('byRepo')">Group by Repository</button>` : ""}
+                          ${Array.isArray(prs) && prs.length > 0 ? `<button id="btn-group-byUser" class="tab-button" onclick="switchView('byUser')">Group by User</button><button id="btn-group-byRepo" class="tab-button" onclick="switchView('byRepo')">Group by Repository</button>` : ""}
                       </div>
                       <div id="byUser" class="tab-content">
                           ${groupPullRequestsByUser(prs)}
@@ -217,22 +217,32 @@ export const routes = {
                       <div id="byRepo" class="tab-content">
                           ${groupPullRequestsByRepo(prs)}
                       </div>
-                    </body>
-                    <script>
-                        function switchView(viewId) {
-                            document.querySelectorAll('.tab-content').forEach(tab => {
-                                tab.classList.remove('active');
-                            });
-                            document.querySelectorAll('.tab-button').forEach(button => {
-                                button.classList.remove('active');
-                            });
-                            document.getElementById(viewId).classList.add('active');
-                            event.target.classList.add('active');
-                        }
-                        // Set default view
-                        switchView('byUser');
-                    </script>
-                    </html>`);
+                      <br/><br/>
+                      <div class="pagination">
+                          <button class="pagination-button" onclick="goToNextPage()">Next Page...</button>
+                      </div>
+                  </body>
+                  <script>
+                      function switchView(viewId) {
+                          document.querySelectorAll('.tab-content').forEach(tab => {
+                              tab.classList.remove('active');
+                          });
+                          document.querySelectorAll('.tab-button').forEach(button => {
+                              button.classList.remove('active');
+                          });
+                          document.getElementById(viewId).classList.add('active');
+                          document.getElementById("btn-group-"+viewId).classList.add('active');
+                      }
+                      function goToNextPage() {
+                            const currentUrl = new URL(window.location.href);
+                            const currentPage = parseInt(currentUrl.searchParams.get('page')) || 1;
+                            currentUrl.searchParams.set('page', currentPage + 1);
+                            window.location.href = currentUrl.toString();
+                      }
+                      // Set default view
+                      switchView('byUser');
+                  </script>
+                  </html>`);
     res.end();
   },
   // ${!Array.isArray(prs) || prs?.length < 1 ? "No contributions found! (Might be an access issue)" : prs?.map(pr => `<li><a href="${pr?.user?.html_url}">${pr?.user?.login}</a> contributed a PR - <a href="${pr?.html_url}" target="_blank">${pr?.title}</a> [${pr?.labels?.map(label => label?.name).join('] [')}]  <small>updated ${timeAgo(pr?.updated_at)}</small></li>`).join('')}
@@ -259,12 +269,13 @@ function groupPullRequestsByUser(prs) {
   for (const user in grouped) {
     html += `<h2>${user}</h2> ${isCLASigned(user) ? "✅" : ""}<ul>`;
     grouped[user].forEach(pr => {
+      const prLabels = pr?.labels?.length > 0 ? "[" + pr?.labels?.map(label => label?.name).join('] [') + "]" : "";
       html += `
-        <li>
-            <a href="${pr?.html_url}" target="_blank">${pr?.title}</a>
-            [${pr?.labels?.map(label => label?.name).join('] [')}]
-            <small> updated ${timeAgo(pr?.updated_at)}</small>
-        </li>`;
+          <li>
+              <a href="${pr?.html_url}" target="_blank">${pr?.title}</a>
+              ${prLabels}
+              <small> updated ${timeAgo(pr?.updated_at)}</small>
+          </li>`;
     });
     html += '</ul>';
   }
@@ -287,11 +298,12 @@ function groupPullRequestsByRepo(prs) {
     const repoName = repo.split('/').slice(-1)[0];
     html += `<h2>${repoName}</h2><ul>`;
     grouped[repo].forEach(pr => {
+      const prLabels = pr?.labels?.length > 0 ? "[" + pr?.labels?.map(label => label?.name).join('] [') + "]" : "";
       html += `
         <li>
             <a href="${pr?.html_url}" target="_blank">${pr?.title}</a>
-            by <a href="${pr?.user?.html_url}">${pr?.user?.login} ${isCLASigned(pr?.user?.login) ? "✅" : ""}</a>
-            [${pr?.labels?.map(label => label?.name).join('] [')}]
+            by <a target="_blank" href="${pr?.user?.html_url}">${pr?.user?.login} ${isCLASigned(pr?.user?.login) ? "✅" : ""}</a>
+            ${prLabels}
             <small> updated ${timeAgo(pr?.updated_at)}</small>
         </li>`;
     });

@@ -278,6 +278,11 @@ export async function getOctokitForOrg(app, org) {
     }
   }
   console.error("No GitHub App installation found for " + org);
+  // Fall back authentication method
+  const DEFAULT_GITHUB_ORG = process.env.DEFAULT_GITHUB_ORG;
+  if (DEFAULT_GITHUB_ORG && org !== DEFAULT_GITHUB_ORG) {
+    return await getOctokitForOrg(app, DEFAULT_GITHUB_ORG);
+  }
 }
 
 export async function verifyGitHubAppAuthenticationAndAccess(app) {
@@ -343,26 +348,33 @@ function parseRepoUrl(repoUrl) {
   }
 }
 
-export async function getOpenPullRequests(app, owner, repo) {
+export async function getOpenPullRequests(app, owner, repo, options) {
   const octokit = await getOctokitForOrg(app, owner);
   if (!octokit) {
     console.error("Failed to search PR because of undefined octokit intance")
     return
   }
-  const query = `is:pr is:open -author:dependabot[bot]` + (repo ? ` repo:${owner + "/" + repo}` : ` org:${owner}`);
+  let query = `is:pr is:open` + (repo ? ` repo:${owner + "/" + repo}` : ` org:${owner}`);
+  const BOT_USERS = process.env.GITHUB_BOT_USERS ? process.env.GITHUB_BOT_USERS.split(",")?.map((item) => item?.trim()) : null;
+  const GITHUB_ORG_MEMBERS = process.env.GITHUB_ORG_MEMBERS ? process.env.GITHUB_ORG_MEMBERS.split(",")?.map((item) => item?.trim()) : null;
+  // Remove results from bots or internal team members
+  BOT_USERS?.forEach((botUser) => query += (" -author:" + botUser));
+  GITHUB_ORG_MEMBERS?.forEach((orgMember) => query += (" -author:" + orgMember));
   const response = await octokit.rest.search.issuesAndPullRequests({
     q: query,
+    per_page: 100,
+    page: options?.page || 1,
     sort: 'created',
     order: 'desc'
   });
-  console.log(response?.data.total_count + " results found for search: " + query);
-  const humanPRs = response.data.items.filter(pr => pr.user && pr.user.type === 'User');
+  console.log(response?.data?.total_count + " results found for search: " + query);
+  const humanPRs = response?.data?.items?.filter(pr => pr.user && pr.user.type === 'User');
   return humanPRs;
 }
 
-export async function getOpenExternalPullRequests(app, owner, repo) {
+export async function getOpenExternalPullRequests(app, owner, repo, options) {
   try {
-    const openPRs = await getOpenPullRequests(app, owner, repo);
+    const openPRs = await getOpenPullRequests(app, owner, repo, options);
     if (!Array.isArray(openPRs)) {
       return;
     }
