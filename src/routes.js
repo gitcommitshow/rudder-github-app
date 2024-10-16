@@ -267,7 +267,7 @@ function groupPullRequestsByUser(prs) {
   }, {});
   let html = '';
   for (const user in grouped) {
-    html += `<h2>${user}</h2> ${isCLASigned(user) ? "✅" : ""}<ul>`;
+    html += `<h2>${user} ${isCLASigned(user) ? "✅" : ""}</h2><ul>`;
     grouped[user].forEach(pr => {
       const prLabels = pr?.labels?.length > 0 ? "[" + pr?.labels?.map(label => label?.name).join('] [') + "]" : "";
       html += `

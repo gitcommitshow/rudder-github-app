@@ -34,7 +34,7 @@ export function isCLARequired(pullRequest) {
     console.log("This PR is from a bot. So no CLA required.");
     return false;
   }
-  if (!isExternalContribution(pullRequest)) {
+  if (!isExternalContributionMaybe(pullRequest)) {
     console.log("This PR is an internal contribution. So no CLA required.");
     return false;
   }
@@ -50,7 +50,7 @@ export function isMessageAfterMergeRequired(pullRequest) {
     console.log("This PR is from a bot. So no message after merge required.");
     return false;
   }
-  if (!isExternalContribution(pullRequest)) {
+  if (!isExternalContributionMaybe(pullRequest)) {
     console.log(
       "This PR is an internal contribution. So no message after merge required.",
     );
@@ -59,17 +59,53 @@ export function isMessageAfterMergeRequired(pullRequest) {
   return true;
 }
 
-export function isExternalContribution(pullRequest) {
+/**
+ * Whether a pull request is a contribution by external user who has bot been associated with the repo
+ * @param {Object} pullRequest 
+ * @returns {boolean | undefined} - boolean when confirmed, undefined when not confirmed
+ */
+export function isExternalContributionMaybe(pullRequest) {
+  if (typeof pullRequest?.author_association === "string") {
+    // OWNER: Author is the owner of the repository.
+    // MEMBER: Author is a member of the organization that owns the repository.
+    // COLLABORATOR: Author has been invited to collaborate on the repository.
+    // CONTRIBUTOR: Author has previously committed to the repository.
+    // FIRST_TIMER: Author has not previously committed to GitHub.
+    // FIRST_TIME_CONTRIBUTOR: Author has not previously committed to the repository.
+    // MANNEQUIN: Author is a placeholder for an unclaimed user.
+    // NONE: Author has no association with the repository (or doesn't want to make his association public).
+    switch (pullRequest.author_association.toUpperCase()) {
+      case "OWNER":
+        return false;
+      case "MEMBER":
+        return false;
+      case "COLLABORATOR":
+        return false;
+      default:
+        //TODO: Need more checks to verify author relation with the repo
+        break;
+    }
+  }
   if (pullRequest?.head?.repo?.full_name !== pullRequest?.base?.repo?.full_name) {
     return true;
-  } else if (pullRequest?.author_association?.toUpperCase() === 'NONE') {
-    // They have neither been the owner, member, collborater, nor they have contributed in the past
-    return true
-  } else if (pullRequest?.author_association?.toUpperCase() === 'CONTRIBUTOR') {
-    // They have contributed in the past (at least in the past as contributor)
-    return true
   }
-  return false;
+  // Ambigous results after this point.
+  // Cannot confirm whether an external contribution or not.
+  // Need more reliable check.
+  return undefined;
+}
+
+async function isExternalContribution(octokit, pullRequest) {
+  const probablisticResult = isExternalContributionMaybe(pullRequest);
+  if (typeof probablisticResult === "boolean") {
+    // Boolean is returned when the probabilistic check is sufficient
+    return probablisticResult;
+  }
+  const username = pullRequest?.user?.login;
+  const { owner, repo } = parseRepoUrl(pullRequest?.repository_url) || {};
+  //TODO: Handle failure in checking permissions for the user
+  const deterministicPermissionCheck = await isAllowedToWriteToTheRepo(octokit, username, owner, repo);
+  return deterministicPermissionCheck;
 }
 
 export function isABot(user) {
@@ -343,17 +379,12 @@ function parseRepoUrl(repoUrl) {
 
     return { owner: segments[segments.length - 2], repo: segments[segments.length - 1] };
   } catch (error) {
-    // Handle cases where URL constructor fails (e.g., SSH URLs)
+    //TODO: Handle cases where URL constructor fails (e.g., SSH URLs)
     return null;
   }
 }
 
-export async function getOpenPullRequests(app, owner, repo, options) {
-  const octokit = await getOctokitForOrg(app, owner);
-  if (!octokit) {
-    console.error("Failed to search PR because of undefined octokit intance")
-    return
-  }
+export async function getOpenPullRequests(octokit, owner, repo, options) {
   let query = `is:pr is:open` + (repo ? ` repo:${owner + "/" + repo}` : ` org:${owner}`);
   const BOT_USERS = process.env.GITHUB_BOT_USERS ? process.env.GITHUB_BOT_USERS.split(",")?.map((item) => item?.trim()) : null;
   const GITHUB_ORG_MEMBERS = process.env.GITHUB_ORG_MEMBERS ? process.env.GITHUB_ORG_MEMBERS.split(",")?.map((item) => item?.trim()) : null;
@@ -374,12 +405,16 @@ export async function getOpenPullRequests(app, owner, repo, options) {
 
 export async function getOpenExternalPullRequests(app, owner, repo, options) {
   try {
-    const openPRs = await getOpenPullRequests(app, owner, repo, options);
+    const octokit = await getOctokitForOrg(app, owner);
+    if (!octokit) {
+      throw new Error("Failed to search PR because of undefined octokit intance")
+    }
+    const openPRs = await getOpenPullRequests(octokit, owner, repo, options);
     if (!Array.isArray(openPRs)) {
       return;
     }
     // Send only the external PRs
-    const openExternalPRs = openPRs?.filter((pr) => isExternalContribution(pr))
+    const openExternalPRs = openPRs?.filter(async (pr) => await isExternalContribution(octokit, pr))
     return openExternalPRs
   } catch (err) {
     return
@@ -419,4 +454,36 @@ export function timeAgo(date) {
     return `${interval} minutes ago`;
   }
   return `${seconds} seconds ago`;
+}
+
+/**
+ * Check user permissions for a repository
+ * The authenticating octokit instance must have "Metadata" repository permissions (read)
+ * @param {string} username 
+ * @param {string} owner 
+ * @param {string} repo 
+ * @returns {boolean}
+ */
+async function isAllowedToWriteToTheRepo(octokit, username, owner, repo,) {
+  try {
+    const result = await octokit.rest.repos.getCollaboratorPermissionLevel({
+      owner,
+      repo,
+      username,
+    });
+    //TODO: Cache request result
+    if (["admin", "write"].includes(result?.permission)) {
+      return true
+    }
+    if (["admin", "maintain", "write"].includes(result?.role_name)) {
+      return true
+    }
+    return false;
+  } catch (err) {
+    // If 403 error "HttpError: Resource not accessible by integration"
+    // The app is not installed in that repo
+    // Only "metadata:repository" permission is needed for this api, which all gh apps have wherever they are installed
+    console.log("Failed to check if a " + username + " is allowed to write to " + owner + "/" + repo);
+    console.error(err);
+  }
 }
