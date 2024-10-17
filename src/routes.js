@@ -11,6 +11,7 @@ import {
   parseUrlQueryParams,
   jsonToCSV,
   getOpenExternalPullRequests,
+  getPullRequestDetail,
   timeAgo
 } from "./helpers.js";
 import { isPasswordValid } from "./auth.js";
@@ -245,6 +246,45 @@ export const routes = {
                   </html>`);
     res.end();
   },
+  async getPullRequestDetail(req, res, app) {
+    const { org, repo, number } = parseUrlQueryParams(req.url) || {};
+    if (!org) {
+      res.writeHead(400);
+      return res.end("Please add org parameter in the url e.g. ?org=my-github-org-name");
+    }
+    const pr = await getPullRequestDetail(app, org, repo, number);
+    if (req.headers['content-type']?.toLowerCase() === 'application/json') {
+      res.setHeader('Content-Type', 'application/json');
+      const jsonString = pr ? JSON.stringify(pr, null, 2) : ("No Pull Requests found (or you don't have access to get this PR " + org + "/" + repo + "/" + number);
+      return res.end(jsonString);
+    }
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.write(`<!DOCTYPE html>
+                <html>
+                <head>
+                  <title>Pull Request Detail</title>
+                  <style>
+                        .tabs { margin-bottom: 20px; }
+                        .tab-button { cursor: pointer; padding: 10px; margin-right: 5px; background-color: #ccc; border: none; }
+                        .tab-button.active { background-color: #999; }
+                        .tab-content { display: none; }
+                        .tab-content.active { display: block; }
+                    </style>
+                  </head>
+                  <body>
+                      <h1>Pull Request Details</h1>
+                      <code>
+                        <pre>
+                          ${JSON.stringify(pr, null, 2)}
+                        </pre>
+                      </code>
+                      <br/><br/>
+                  </body>
+                  <script>
+                      
+                  </script>
+                  </html>`);
+  },
   // ${!Array.isArray(prs) || prs?.length < 1 ? "No contributions found! (Might be an access issue)" : prs?.map(pr => `<li><a href="${pr?.user?.html_url}">${pr?.user?.login}</a> contributed a PR - <a href="${pr?.html_url}" target="_blank">${pr?.title}</a> [${pr?.labels?.map(label => label?.name).join('] [')}]  <small>updated ${timeAgo(pr?.updated_at)}</small></li>`).join('')}
   default(req, res) {
     res.writeHead(404);
@@ -252,6 +292,7 @@ export const routes = {
     return res.end();
   },
 };
+
 
 
 function groupPullRequestsByUser(prs) {
@@ -269,12 +310,17 @@ function groupPullRequestsByUser(prs) {
   for (const user in grouped) {
     html += `<h2>${user} ${isCLASigned(user) ? "✅" : ""}</h2><ul>`;
     grouped[user].forEach(pr => {
+      const repo = pr?.repository_url;
+      const repoName = repo.split('/').slice(-1)[0];
+      const org = repo.split('/').slice(-2)[0];
       const prLabels = pr?.labels?.length > 0 ? "[" + pr?.labels?.map(label => label?.name).join('] [') + "]" : "";
       html += `
           <li>
               <a href="${pr?.html_url}" target="_blank">${pr?.title}</a>
               ${prLabels}
+              ${typeof pr.isExternalContribution === "boolean" ? "" : " --Author Association Not Confirmed-- "}
               <small> updated ${timeAgo(pr?.updated_at)}</small>
+              <a href="/contributions/detail?org=${org}&repo=${repoName}&number=${pr?.number}" targe="_blank">Get Details</a>
           </li>`;
     });
     html += '</ul>';
@@ -296,6 +342,7 @@ function groupPullRequestsByRepo(prs) {
   let html = '';
   for (const repo in grouped) {
     const repoName = repo.split('/').slice(-1)[0];
+    const org = repo.split('/').slice(-2)[0];
     html += `<h2>${repoName}</h2><ul>`;
     grouped[repo].forEach(pr => {
       const prLabels = pr?.labels?.length > 0 ? "[" + pr?.labels?.map(label => label?.name).join('] [') + "]" : "";
@@ -304,7 +351,9 @@ function groupPullRequestsByRepo(prs) {
             <a href="${pr?.html_url}" target="_blank">${pr?.title}</a>
             by <a target="_blank" href="${pr?.user?.html_url}">${pr?.user?.login} ${isCLASigned(pr?.user?.login) ? "✅" : ""}</a>
             ${prLabels}
+            ${typeof pr.isExternalContribution === "boolean" ? "" : " --Author Association Not Confirmed-- "}
             <small> updated ${timeAgo(pr?.updated_at)}</small>
+            <a href="/contributions/detail?org=${org}&repo=${repoName}&number=${pr?.number}" targe="_blank">Get Details</a>
         </li>`;
     });
     html += '</ul>';

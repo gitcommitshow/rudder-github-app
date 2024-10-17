@@ -239,6 +239,9 @@ http
       case "GET /contributions":
         routes.listPullRequests(req, res, app);
         break;
+      case "GET /contributions/detail":
+        routes.getPullRequestDetail(req, res, app);
+        break;
       case "POST /api/webhook":
         middleware(req, res);
         break;

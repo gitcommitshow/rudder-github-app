@@ -76,10 +76,13 @@ export function isExternalContributionMaybe(pullRequest) {
     // NONE: Author has no association with the repository (or doesn't want to make his association public).
     switch (pullRequest.author_association.toUpperCase()) {
       case "OWNER":
+        //TODO: Cache isExternalContributionInfo { owner/repo/number: false }
         return false;
       case "MEMBER":
+        //TODO: Cache isExternalContributionInfo { owner/repo/number: false }
         return false;
       case "COLLABORATOR":
+        //TODO: Cache isExternalContributionInfo { owner/repo/number: false }
         return false;
       default:
         //TODO: Need more checks to verify author relation with the repo
@@ -87,6 +90,7 @@ export function isExternalContributionMaybe(pullRequest) {
     }
   }
   if (pullRequest?.head?.repo?.full_name !== pullRequest?.base?.repo?.full_name) {
+    //TODO: Cache isExternalContributionInfo { owner/repo/number: true }
     return true;
   }
   // Ambigous results after this point.
@@ -105,6 +109,7 @@ async function isExternalContribution(octokit, pullRequest) {
   const { owner, repo } = parseRepoUrl(pullRequest?.repository_url) || {};
   //TODO: Handle failure in checking permissions for the user
   const deterministicPermissionCheck = await isAllowedToWriteToTheRepo(octokit, username, owner, repo);
+  //TODO: Cache isExternalContributionInfo { owner/repo/number: deterministicPermissionCheck }
   return deterministicPermissionCheck;
 }
 
@@ -304,6 +309,17 @@ export function jsonToCSV(arr) {
   return csvRows.join('\n');
 }
 
+/**
+ * Authenticate as app installation for the org
+ * Authenticating as an app installation lets your app access resources that are owned by the user or organization
+ * that installed the app. Authenticating as an app installation is ideal for automation workflows
+ * that don't involve user input.
+ * Check out { @link https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/about-authentication-with-a-github-app GitHub Docs for Authentication }
+ *  and { @tutorial https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-as-a-github-app-installation GitHub Docs for Authenticating App Installation}
+ * @param {Object} app 
+ * @param {string} org 
+ * @returns 
+ */
 export async function getOctokitForOrg(app, org) {
   // Find the installation for the organization
   for await (const { installation } of app.eachInstallation.iterator()) {
@@ -414,7 +430,20 @@ export async function getOpenExternalPullRequests(app, owner, repo, options) {
       return;
     }
     // Send only the external PRs
-    const openExternalPRs = openPRs?.filter(async (pr) => await isExternalContribution(octokit, pr))
+    const openExternalPRs = []
+    for (const pr of openPRs) {
+      try {
+        pr.isExternalContribution = await isExternalContribution(octokit, pr);
+        if (pr.isExternalContribution) {
+          openExternalPRs.push(pr);
+        }
+      } catch (err) {
+        // Some error occurred, so we cannot deterministically say whether it is an external contribution or not
+        pr.isExternalContribution = undefined;
+        // We are anyways going to send this in the external open PR list
+        openExternalPRs.push(pr);
+      }
+    }
     return openExternalPRs
   } catch (err) {
     return
@@ -485,5 +514,21 @@ async function isAllowedToWriteToTheRepo(octokit, username, owner, repo,) {
     // Only "metadata:repository" permission is needed for this api, which all gh apps have wherever they are installed
     console.log("Failed to check if a " + username + " is allowed to write to " + owner + "/" + repo);
     console.error(err);
+    throw new Error("Failed to check user permission for the repo")
   }
+}
+
+export async function getPullRequestDetail(app, owner, repo, number) {
+  const octokit = await getOctokitForOrg(app, owner);
+  if (!octokit) {
+    throw new Error("Failed to search PR because of undefined octokit intance")
+  }
+  const { data } = await octokit.rest.pulls.get({
+    owner: owner,
+    repo: repo,
+    pull_number: number
+  });
+  if (!data) return data;
+  const pr = Object.assign({}, data, { isExternalContribution: isExternalContributionMaybe(data) });
+  return pr;
 }
