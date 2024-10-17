@@ -259,7 +259,7 @@ export const routes = {
       return res.end(jsonString);
     }
     res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.write(`<!DOCTYPE html>
+    res.end(`<!DOCTYPE html>
                 <html>
                 <head>
                   <title>Pull Request Detail</title>

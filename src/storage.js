@@ -4,6 +4,7 @@ import { PROJECT_ROOT_PATH } from "./config.js";
 
 const dbPath = process.env.DB_PATH || resolve(PROJECT_ROOT_PATH, "db.json");
 createFileIfMissing(dbPath);
+const CACHE = new Map();
 
 function createFileIfMissing(path) {
   try {
@@ -43,4 +44,14 @@ export const storage = {
       return true;
     });
   },
+  cache: {
+    get: function (...args) {
+      const key = args.join("/");
+      return CACHE.get(key);
+    },
+    set: function (value, ...args) {
+      const key = args.join("/");
+      return CACHE.set(key, value);
+    }
+  }
 };

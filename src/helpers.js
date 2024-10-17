@@ -65,6 +65,8 @@ export function isMessageAfterMergeRequired(pullRequest) {
  * @returns {boolean | undefined} - boolean when confirmed, undefined when not confirmed
  */
 export function isExternalContributionMaybe(pullRequest) {
+  const { owner, repo } = parseRepoUrl(pullRequest?.repository_url || pullRequest?.base?.repo?.html_url) || {};
+  const username = pullRequest?.user?.login;
   if (typeof pullRequest?.author_association === "string") {
     // OWNER: Author is the owner of the repository.
     // MEMBER: Author is a member of the organization that owns the repository.
@@ -76,22 +78,28 @@ export function isExternalContributionMaybe(pullRequest) {
     // NONE: Author has no association with the repository (or doesn't want to make his association public).
     switch (pullRequest.author_association.toUpperCase()) {
       case "OWNER":
-        //TODO: Cache isExternalContributionInfo { owner/repo/number: false }
+        storage.cache.set(false, username, "contribution", "external", owner, repo);
         return false;
       case "MEMBER":
-        //TODO: Cache isExternalContributionInfo { owner/repo/number: false }
+        storage.cache.set(false, username, "contribution", "external", owner, repo);
         return false;
       case "COLLABORATOR":
-        //TODO: Cache isExternalContributionInfo { owner/repo/number: false }
+        pullRequest.isExternalContribution = false;
+        storage.cache.set(false, username, "contribution", "external", owner, repo);
         return false;
       default:
-        //TODO: Need more checks to verify author relation with the repo
+        //Will need more checks to verify author relation with the repo
         break;
     }
   }
   if (pullRequest?.head?.repo?.full_name !== pullRequest?.base?.repo?.full_name) {
-    //TODO: Cache isExternalContributionInfo { owner/repo/number: true }
+    storage.cache.set(true, username, "contribution", "external", owner, repo);
     return true;
+  }
+  // Utilize cache if possible
+  const isConfirmedToBeExternalContributionInPast = storage.cache.get(username, "contribution", "external", owner, repo);
+  if (typeof isConfirmedToBeExternalContributionInPast === "boolean") {
+    return isConfirmedToBeExternalContributionInPast
   }
   // Ambigous results after this point.
   // Cannot confirm whether an external contribution or not.
@@ -106,10 +114,11 @@ async function isExternalContribution(octokit, pullRequest) {
     return probablisticResult;
   }
   const username = pullRequest?.user?.login;
-  const { owner, repo } = parseRepoUrl(pullRequest?.repository_url) || {};
+  const { owner, repo } = parseRepoUrl(pullRequest?.repository_url || pullRequest?.base?.repo?.html_url) || {};
   //TODO: Handle failure in checking permissions for the user
   const deterministicPermissionCheck = await isAllowedToWriteToTheRepo(octokit, username, owner, repo);
-  //TODO: Cache isExternalContributionInfo { owner/repo/number: deterministicPermissionCheck }
+  pullRequest.isExternalContribution = deterministicPermissionCheck;
+  storage.cache.set(pullRequest, username, "contribution", "external", owner, repo);
   return deterministicPermissionCheck;
 }
 
@@ -500,7 +509,6 @@ async function isAllowedToWriteToTheRepo(octokit, username, owner, repo,) {
       repo,
       username,
     });
-    //TODO: Cache request result
     if (["admin", "write"].includes(result?.permission)) {
       return true
     }
