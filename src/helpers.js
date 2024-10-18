@@ -118,7 +118,7 @@ async function isExternalContribution(octokit, pullRequest) {
   //TODO: Handle failure in checking permissions for the user
   const deterministicPermissionCheck = await isAllowedToWriteToTheRepo(octokit, username, owner, repo);
   pullRequest.isExternalContribution = deterministicPermissionCheck;
-  storage.cache.set(pullRequest, username, "contribution", "external", owner, repo);
+  storage.cache.set(deterministicPermissionCheck, username, "contribution", "external", owner, repo);
   return deterministicPermissionCheck;
 }
 
