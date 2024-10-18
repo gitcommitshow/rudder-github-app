@@ -78,9 +78,11 @@ export function isExternalContributionMaybe(pullRequest) {
     // NONE: Author has no association with the repository (or doesn't want to make his association public).
     switch (pullRequest.author_association.toUpperCase()) {
       case "OWNER":
+        pullRequest.isExternalContribution = false;
         storage.cache.set(false, username, "contribution", "external", owner, repo);
         return false;
       case "MEMBER":
+        pullRequest.isExternalContribution = false;
         storage.cache.set(false, username, "contribution", "external", owner, repo);
         return false;
       case "COLLABORATOR":
@@ -93,12 +95,18 @@ export function isExternalContributionMaybe(pullRequest) {
     }
   }
   if (pullRequest?.head?.repo?.full_name !== pullRequest?.base?.repo?.full_name) {
+    pullRequest.isExternalContribution = true;
     storage.cache.set(true, username, "contribution", "external", owner, repo);
     return true;
+  } else if (pullRequest?.head?.repo?.full_name && pullRequest?.base?.repo?.full_name) {
+    pullRequest.isExternalContribution = false;
+    storage.cache.set(false, username, "contribution", "external", owner, repo);
+    return false;
   }
   // Utilize cache if possible
   const isConfirmedToBeExternalContributionInPast = storage.cache.get(username, "contribution", "external", owner, repo);
   if (typeof isConfirmedToBeExternalContributionInPast === "boolean") {
+    pullRequest.isExternalContribution = isConfirmedToBeExternalContributionInPast;
     return isConfirmedToBeExternalContributionInPast
   }
   // Ambigous results after this point.
@@ -521,7 +529,7 @@ async function isAllowedToWriteToTheRepo(octokit, username, owner, repo,) {
     // The app is not installed in that repo
     // Only "metadata:repository" permission is needed for this api, which all gh apps have wherever they are installed
     console.log("Failed to check if a " + username + " is allowed to write to " + owner + "/" + repo);
-    console.error(err);
+    // console.error(err);
     throw new Error("Failed to check user permission for the repo")
   }
 }
