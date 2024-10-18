@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/gitcommitshow/rudder-github-app/compare/v0.5.0...v0.5.1) (2024-10-18)
+
+
+### Bug Fixes
+
+* replace cache value with the boolean output ([#61](https://github.com/gitcommitshow/rudder-github-app/issues/61)) ([cdbfe07](https://github.com/gitcommitshow/rudder-github-app/commit/cdbfe07f25d7c4697a2e86a5602e00dd2ae5f499))
+
 ## [0.5.0](https://github.com/gitcommitshow/rudder-github-app/compare/v0.4.1...v0.5.0) (2024-10-18)
 
 
