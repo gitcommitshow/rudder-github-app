@@ -239,7 +239,7 @@ http
       case "GET /contributions":
         routes.listPullRequests(req, res, app);
         break;
-      case "GET /contributions/detail":
+      case "GET /contributions/pr":
         routes.getPullRequestDetail(req, res, app);
         break;
       case "POST /api/webhook":

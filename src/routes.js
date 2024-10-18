@@ -319,7 +319,7 @@ function groupPullRequestsByUser(prs) {
               <a href="${pr?.html_url}" target="_blank">${pr?.title}</a>
               ${prLabels}
               <small> updated ${timeAgo(pr?.updated_at)}</small>
-              <a href="/contributions/detail?org=${org}&repo=${repoName}&number=${pr?.number}" target="_blank"><button>Get Details</button></a>
+              <a href="/contributions/pr?org=${org}&repo=${repoName}&number=${pr?.number}" target="_blank"><button>Get Details</button></a>
               <small>${typeof pr.isExternalContribution === "boolean" ? "" : " (Click to confirm author association) "}</small>
           </li>`;
     });
@@ -352,7 +352,7 @@ function groupPullRequestsByRepo(prs) {
             by <a target="_blank" href="${pr?.user?.html_url}">${pr?.user?.login} ${isCLASigned(pr?.user?.login) ? "✅" : ""}</a>
             ${prLabels}
             <small> updated ${timeAgo(pr?.updated_at)}</small>
-            <a href="/contributions/detail?org=${org}&repo=${repoName}&number=${pr?.number}" target="_blank"><button>Get Details</button></a>
+            <a href="/contributions/pr?org=${org}&repo=${repoName}&number=${pr?.number}" target="_blank"><button>Get Details</button></a>
             <small>${typeof pr.isExternalContribution === "boolean" ? "" : " (Click to confirm author association) "}</small>
         </li>`;
     });
