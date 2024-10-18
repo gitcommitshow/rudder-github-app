@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/gitcommitshow/rudder-github-app/compare/v0.5.1...v0.5.2) (2024-10-18)
+
+
+### Bug Fixes
+
+* deal with the negative deterministic ext contrib check ([#63](https://github.com/gitcommitshow/rudder-github-app/issues/63)) ([eb2871e](https://github.com/gitcommitshow/rudder-github-app/commit/eb2871eca63b5140ee519058e736f76509a3918f))
+
 ## [0.5.1](https://github.com/gitcommitshow/rudder-github-app/compare/v0.5.0...v0.5.1) (2024-10-18)
 
 
