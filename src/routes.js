@@ -320,7 +320,7 @@ function groupPullRequestsByUser(prs) {
               ${prLabels}
               <small> updated ${timeAgo(pr?.updated_at)}</small>
               <a href="/contributions/pr?org=${org}&repo=${repoName}&number=${pr?.number}" target="_blank"><button>Get Details</button></a>
-              <small>${typeof pr.isExternalContribution === "boolean" ? "" : " (Click to confirm author association) "}</small>
+              <small style="opacity: 0.6">${typeof pr.isExternalContribution === "boolean" ? "" : " (Click to confirm author association) "}</small>
           </li>`;
     });
     html += '</ul>';
@@ -353,7 +353,7 @@ function groupPullRequestsByRepo(prs) {
             ${prLabels}
             <small> updated ${timeAgo(pr?.updated_at)}</small>
             <a href="/contributions/pr?org=${org}&repo=${repoName}&number=${pr?.number}" target="_blank"><button>Get Details</button></a>
-            <small>${typeof pr.isExternalContribution === "boolean" ? "" : " (Click to confirm author association) "}</small>
+            <small style="opacity: 0.6">${typeof pr.isExternalContribution === "boolean" ? "" : " (Click to confirm author association) "}</small>
         </li>`;
     });
     html += '</ul>';
