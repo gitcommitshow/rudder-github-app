@@ -318,9 +318,9 @@ function groupPullRequestsByUser(prs) {
           <li>
               <a href="${pr?.html_url}" target="_blank">${pr?.title}</a>
               ${prLabels}
-              ${typeof pr.isExternalContribution === "boolean" ? "" : " --Author Association Not Confirmed-- "}
               <small> updated ${timeAgo(pr?.updated_at)}</small>
-              <a href="/contributions/detail?org=${org}&repo=${repoName}&number=${pr?.number}" targe="_blank">Get Details</a>
+              <a href="/contributions/detail?org=${org}&repo=${repoName}&number=${pr?.number}" target="_blank"><button>Get Details</button></a>
+              <small>${typeof pr.isExternalContribution === "boolean" ? "" : " (Click to confirm author association) "}</small>
           </li>`;
     });
     html += '</ul>';
@@ -351,9 +351,9 @@ function groupPullRequestsByRepo(prs) {
             <a href="${pr?.html_url}" target="_blank">${pr?.title}</a>
             by <a target="_blank" href="${pr?.user?.html_url}">${pr?.user?.login} ${isCLASigned(pr?.user?.login) ? "✅" : ""}</a>
             ${prLabels}
-            ${typeof pr.isExternalContribution === "boolean" ? "" : " --Author Association Not Confirmed-- "}
             <small> updated ${timeAgo(pr?.updated_at)}</small>
-            <a href="/contributions/detail?org=${org}&repo=${repoName}&number=${pr?.number}" targe="_blank">Get Details</a>
+            <a href="/contributions/detail?org=${org}&repo=${repoName}&number=${pr?.number}" target="_blank"><button>Get Details</button></a>
+            <small>${typeof pr.isExternalContribution === "boolean" ? "" : " (Click to confirm author association) "}</small>
         </li>`;
     });
     html += '</ul>';
