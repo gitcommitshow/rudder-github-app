@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/gitcommitshow/rudder-github-app/compare/v0.4.1...v0.5.0) (2024-10-18)
+
+
+### Features
+
+* add a pr list page ([#57](https://github.com/gitcommitshow/rudder-github-app/issues/57)) ([f152d39](https://github.com/gitcommitshow/rudder-github-app/commit/f152d3966b24f329e320e950ea16d070fd73b67f))
+
+
+### Bug Fixes
+
+* missed null checks ([#54](https://github.com/gitcommitshow/rudder-github-app/issues/54)) ([2739f74](https://github.com/gitcommitshow/rudder-github-app/commit/2739f74455880a56448aa1bbc6f2d9fdfb003aa2))
+
 ## [0.4.1](https://github.com/gitcommitshow/rudder-github-app/compare/v0.4.0...v0.4.1) (2024-09-27)
 
 
