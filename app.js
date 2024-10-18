@@ -233,6 +233,15 @@ http
       case "POST /cla":
         routes.submitCla(req, res, app);
         break;
+      case "GET /contributions/sync":
+        routes.syncPullRequests(req, res, app);
+        break;
+      case "GET /contributions":
+        routes.listPullRequests(req, res, app);
+        break;
+      case "GET /contributions/pr":
+        routes.getPullRequestDetail(req, res, app);
+        break;
       case "POST /api/webhook":
         middleware(req, res);
         break;
