@@ -173,7 +173,7 @@ export async function afterCLA(app, claSignatureInfo) {
   }
 
   console.log(`Processing CLA for ${githubUsername ? `user: ${githubUsername}` : 'unknown user'} in org/account: ${org}`);
-  
+  let failuresToRemoveLabel = 0; // To track the failures in removing labels
   try {
     //TODO: Check if the Octokit instance is already authenticated with an installation ID
     const octokit = await getOctokitForOrg(app, org);
@@ -188,7 +188,6 @@ export async function afterCLA(app, claSignatureInfo) {
 
     const filteredPrs = prs?.filter(pr => pr?.user?.login === githubUsername);
     console.log(`Found ${filteredPrs?.length} open PRs for ${githubUsername} in ${org}:`, filteredPrs?.map(pr => pr?.number).join(', '));
-    let failuresToRemoveLabel = 0;
     for (const pr of filteredPrs) {
       const { owner, repo } = parseRepoUrl(pr?.repository_url) || {};
       const hasPendingCLALabel = pr.labels?.some(label => label?.name?.toLowerCase() === "pending cla");
