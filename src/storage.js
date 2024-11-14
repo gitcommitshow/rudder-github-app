@@ -21,6 +21,17 @@ function initCache() {
   }
 }
 
+function clearCache() {
+  CACHE.clear();
+  fs.truncate(cachePath, 0, (err) => {
+    if (err) {
+      console.error('Error truncating cache file:', err);
+    } else {
+      console.log('Cache file content deleted successfully.');
+    }
+  });
+}
+
 async function lazyCacheSnapshot() {
   try {
     const currentTime = new Date().getTime();
@@ -92,6 +103,9 @@ export const storage = {
       let cache = CACHE.set(key, value);
       lazyCacheSnapshot();
       return cache
+    },
+    clear: function () {
+      clearCache();
     }
   }
 };

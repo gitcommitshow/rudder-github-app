@@ -221,6 +221,7 @@ export const routes = {
                       <br/><br/>
                       <div class="pagination">
                           <button class="pagination-button" onclick="goToNextPage()">Next Page...</button>
+                          <a href="/contributions/reset" target="_blank">Reset</button>
                       </div>
                   </body>
                   <script>
@@ -284,6 +285,11 @@ export const routes = {
                       
                   </script>
                   </html>`);
+  },
+  resetContributionData(req, res, app) {
+    storage.cache.clear();
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.write('Cache cleared');
   },
   // ${!Array.isArray(prs) || prs?.length < 1 ? "No contributions found! (Might be an access issue)" : prs?.map(pr => `<li><a href="${pr?.user?.html_url}">${pr?.user?.login}</a> contributed a PR - <a href="${pr?.html_url}" target="_blank">${pr?.title}</a> [${pr?.labels?.map(label => label?.name).join('] [')}]  <small>updated ${timeAgo(pr?.updated_at)}</small></li>`).join('')}
   default(req, res) {

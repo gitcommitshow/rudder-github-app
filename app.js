@@ -241,6 +241,9 @@ http
       case "GET /contributions/pr":
         routes.getPullRequestDetail(req, res, app);
         break;
+      case "GET /contributions/reset":
+        routes.resetContributionData(req, res, app);
+        break;
       case "POST /api/webhook":
         middleware(req, res);
         break;
