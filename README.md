@@ -9,6 +9,7 @@ A Node.js server for GitHub app to assist external contributors and save maintai
 - [x] On `rudder-transformer` PR merge, post a comment to raise PR in `integrations-config`
 - [ ] On `integrations-config` PR merge, psot a comment to join Slack's product-releases channel to get notified when that integration goes live
 - [ ] On `integrations-config` PR merge, post a comment to raise PR in `rudder-docs`
+- [x] List of open PRs by external contributors
 
 ## Requirements
 

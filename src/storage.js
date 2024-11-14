@@ -3,8 +3,57 @@ import { resolve } from "path";
 import { PROJECT_ROOT_PATH } from "./config.js";
 
 const dbPath = process.env.DB_PATH || resolve(PROJECT_ROOT_PATH, "db.json");
+const cachePath = process.env.CACHE_PATH || resolve(PROJECT_ROOT_PATH, "cache.json");
 createFileIfMissing(dbPath);
-const CACHE = new Map();
+createFileIfMissing(cachePath);
+const CACHE = initCache();
+let lastSnapshotTime = new Date().getTime();
+let cacheSnapshotSize = CACHE.size;
+const CACHE_SNAPSHOT_INTERVAL = 1000 * 60 * 5;
+
+function initCache() {
+  try {
+    const json = fs.readFileSync(cachePath, 'utf-8'); // Read the file as a string
+    const obj = JSON.parse(json); // Parse JSON back to an object
+    return new Map(Object.entries(obj)); // Convert Object to a Map
+  } catch (err) {
+    return new Map();
+  }
+}
+
+function clearCache() {
+  CACHE.clear();
+  fs.truncate(cachePath, 0, (err) => {
+    if (err) {
+      console.error('Error truncating cache file:', err);
+    } else {
+      console.log('Cache file content deleted successfully.');
+    }
+  });
+}
+
+async function lazyCacheSnapshot() {
+  try {
+    const currentTime = new Date().getTime();
+    if ((currentTime - lastSnapshotTime) < CACHE_SNAPSHOT_INTERVAL || CACHE.size === cacheSnapshotSize) {
+      return;
+    }
+    const obj = Object.fromEntries(CACHE); // Convert Map to an Object
+    const json = JSON.stringify(obj, null, 2); // Convert Object to JSON
+    fs.writeFile(cachePath, json, 'utf-8', function (err) {
+      if (!err) {
+        cacheSnapshotSize = CACHE.size;
+        console.log("Cache saved to file successfully. Total entries: " + cacheSnapshotSize);
+      } else {
+        console.error("Unexpected error in saving cache to file. Could be permission related issue.");
+      }
+    }); // Write JSON to a file
+    lastSnapshotTime = currentTime;
+    console.log(`Cache saved to ${cachePath}`);
+  } catch (err) {
+    console.error("Error in saving cache to file");
+  }
+}
 
 function createFileIfMissing(path) {
   try {
@@ -51,7 +100,12 @@ export const storage = {
     },
     set: function (value, ...args) {
       const key = args.join("/");
-      return CACHE.set(key, value);
+      let cache = CACHE.set(key, value);
+      lazyCacheSnapshot();
+      return cache
+    },
+    clear: function () {
+      clearCache();
     }
   }
 };

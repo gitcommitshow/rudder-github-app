@@ -1,4 +1,6 @@
 import dotenv from "dotenv";
+// Load environment variables from .env file
+dotenv.config();
 import fs from "fs";
 import http from "http";
 import url from "url";
@@ -22,9 +24,6 @@ try {
 }
 console.log(`Application version: ${APP_VERSION}`);
 console.log(`Website address: ${process.env.WEBSITE_ADDRESS}`);
-
-// Load environment variables from .env file
-dotenv.config();
 
 // Set configured values
 const appId = process.env.APP_ID;
@@ -241,6 +240,9 @@ http
         break;
       case "GET /contributions/pr":
         routes.getPullRequestDetail(req, res, app);
+        break;
+      case "GET /contributions/reset":
+        routes.resetContributionData(req, res, app);
         break;
       case "POST /api/webhook":
         middleware(req, res);
