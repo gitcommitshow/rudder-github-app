@@ -8,7 +8,7 @@ createFileIfMissing(dbPath);
 createFileIfMissing(cachePath);
 const CACHE = initCache();
 let lastSnapshotTime = new Date().getTime();
-let pendingCacheToSnapshot = 0;
+let cacheSnapshotSize = CACHE.size;
 const CACHE_SNAPSHOT_INTERVAL = 1000 * 60 * 5;
 
 function initCache() {
@@ -24,13 +24,19 @@ function initCache() {
 async function lazyCacheSnapshot() {
   try {
     const currentTime = new Date().getTime();
-    if ((currentTime - lastSnapshotTime) < CACHE_SNAPSHOT_INTERVAL) {
-      pendingCacheToSnapshot++;
+    if ((currentTime - lastSnapshotTime) < CACHE_SNAPSHOT_INTERVAL || CACHE.size === cacheSnapshotSize) {
       return;
     }
     const obj = Object.fromEntries(CACHE); // Convert Map to an Object
     const json = JSON.stringify(obj, null, 2); // Convert Object to JSON
-    fs.writeFile(cachePath, json, 'utf-8'); // Write JSON to a file
+    fs.writeFile(cachePath, json, 'utf-8', function (err) {
+      if (!err) {
+        cacheSnapshotSize = CACHE.size;
+        console.log("Cache saved to file successfully. Total entries: " + cacheSnapshotSize);
+      } else {
+        console.error("Unexpected error in saving cache to file. Could be permission related issue.");
+      }
+    }); // Write JSON to a file
     lastSnapshotTime = currentTime;
     console.log(`Cache saved to ${cachePath}`);
   } catch (err) {

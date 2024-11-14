@@ -3,7 +3,9 @@ import { resolve } from "path";
 import { PROJECT_ROOT_PATH } from "./config.js";
 import url from "node:url";
 
-const ONE_CLA_PER_ORG = process.env.ONE_CLA_PER_ORG?.toLowerCase()?.trim() === "true";
+function isOneCLAPerOrgEnough() {
+  return process.env.ONE_CLA_PER_ORG?.toLowerCase()?.trim() === "true" ? true : false;
+}
 
 export function parseUrlQueryParams(urlString) {
   if(!urlString) return urlString;
@@ -81,15 +83,15 @@ export function isExternalContributionMaybe(pullRequest) {
     switch (pullRequest.author_association.toUpperCase()) {
       case "OWNER":
         pullRequest.isExternalContribution = false;
-        storage.cache.set(false, username, "contribution", "external", owner, ONE_CLA_PER_ORG ? undefined : repo);
+        storage.cache.set(false, username, "contribution", "external", owner, isOneCLAPerOrgEnough() ? undefined : repo);
         return false;
       case "MEMBER":
         pullRequest.isExternalContribution = false;
-        storage.cache.set(false, username, "contribution", "external", owner, ONE_CLA_PER_ORG ? undefined : repo);
+        storage.cache.set(false, username, "contribution", "external", owner, isOneCLAPerOrgEnough() ? undefined : repo);
         return false;
       case "COLLABORATOR":
         pullRequest.isExternalContribution = false;
-        storage.cache.set(false, username, "contribution", "external", owner, ONE_CLA_PER_ORG ? undefined : repo);
+        storage.cache.set(false, username, "contribution", "external", owner, isOneCLAPerOrgEnough() ? undefined : repo);
         return false;
       default:
         //Will need more checks to verify author relation with the repo
@@ -98,15 +100,15 @@ export function isExternalContributionMaybe(pullRequest) {
   }
   if (pullRequest?.head?.repo?.full_name !== pullRequest?.base?.repo?.full_name) {
     pullRequest.isExternalContribution = true;
-    storage.cache.set(true, username, "contribution", "external", owner, ONE_CLA_PER_ORG ? undefined : repo);
+    storage.cache.set(true, username, "contribution", "external", owner, isOneCLAPerOrgEnough() ? undefined : repo);
     return true;
   } else if (pullRequest?.head?.repo?.full_name && pullRequest?.base?.repo?.full_name) {
     pullRequest.isExternalContribution = false;
-    storage.cache.set(false, username, "contribution", "external", owner, ONE_CLA_PER_ORG ? undefined : repo);
+    storage.cache.set(false, username, "contribution", "external", owner, isOneCLAPerOrgEnough() ? undefined : repo);
     return false;
   }
   // Utilize cache if possible
-  const isConfirmedToBeExternalContributionInPast = storage.cache.get(username, "contribution", "external", owner, ONE_CLA_PER_ORG ? undefined : repo);
+  const isConfirmedToBeExternalContributionInPast = storage.cache.get(username, "contribution", "external", owner, isOneCLAPerOrgEnough() ? undefined : repo);
   if (typeof isConfirmedToBeExternalContributionInPast === "boolean") {
     pullRequest.isExternalContribution = isConfirmedToBeExternalContributionInPast;
     return isConfirmedToBeExternalContributionInPast
@@ -128,7 +130,7 @@ async function isExternalContribution(octokit, pullRequest) {
   //TODO: Handle failure in checking permissions for the user
   const deterministicPermissionCheck = await isAllowedToWriteToTheRepo(octokit, username, owner, repo);
   pullRequest.isExternalContribution = deterministicPermissionCheck;
-  storage.cache.set(deterministicPermissionCheck, username, "contribution", "external", owner, ONE_CLA_PER_ORG ? undefined : repo);
+  storage.cache.set(deterministicPermissionCheck, username, "contribution", "external", owner, isOneCLAPerOrgEnough() ? undefined : repo);
   return deterministicPermissionCheck;
 }
 
