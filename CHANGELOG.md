@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/gitcommitshow/rudder-github-app/compare/v0.5.2...v0.6.0) (2024-11-14)
+
+
+### Features
+
+* setting to mark user contributions internal across org ([#69](https://github.com/gitcommitshow/rudder-github-app/issues/69)) ([4d3cd13](https://github.com/gitcommitshow/rudder-github-app/commit/4d3cd13f4897e4a66a33a484c185aa9b803cb42e))
+
+
+### Bug Fixes
+
+* incorrect user feedback after successful cla sign ([#67](https://github.com/gitcommitshow/rudder-github-app/issues/67)) ([77089a6](https://github.com/gitcommitshow/rudder-github-app/commit/77089a61dafe3a69fe840e9099c78bf6b52d9a2c))
+
 ## [0.5.2](https://github.com/gitcommitshow/rudder-github-app/compare/v0.5.1...v0.5.2) (2024-10-18)
 
 
