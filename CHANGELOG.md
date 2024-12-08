@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/gitcommitshow/rudder-github-app/compare/v0.6.0...v0.7.0) (2024-12-08)
+
+
+### Features
+
+* ask for name in cla ([#70](https://github.com/gitcommitshow/rudder-github-app/issues/70)) ([42d945d](https://github.com/gitcommitshow/rudder-github-app/commit/42d945d7526d2717bb244feeb937b1d587500831))
+
 ## [0.6.0](https://github.com/gitcommitshow/rudder-github-app/compare/v0.5.2...v0.6.0) (2024-11-14)
 
 
