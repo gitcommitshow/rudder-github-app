@@ -7,5 +7,8 @@ export function sanitizeInput(input) {
     if (typeof input !== 'string') {
         return input;
     }
+    if(input.length > 30){
+        input = input.substring(0, 30);
+    }
     return input.replace(/<\/?[^>]+(>|$)/g, "");
 }

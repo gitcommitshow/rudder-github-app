@@ -53,7 +53,7 @@ export const routes = {
     });
 
     req.on("end", async () => {
-      let { terms, username, email, referrer } = queryStringToJson(body) || {};
+      let { terms, legalName, username, email, referrer } = queryStringToJson(body) || {};
       const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
       if (!referrer && req.headers["referer"]) {
         referrer = req.headers["referer"];
@@ -61,14 +61,15 @@ export const routes = {
       const serverTimestamp = new Date().toISOString();
       username = sanitizeInput(username);
       email = sanitizeInput(email);
-      if (!terms || terms !== "on" || !username) {
+      legalName = sanitizeInput(legalName);
+      if (!terms || terms !== "on" || !username || !legalName) {
         res.writeHead(302, {
           Location: referrer || "/cla",
         });
         return res.end();
       }
       try {
-        storage.save({ terms, username, email, ip, referrer, serverTimestamp });
+        storage.save({ terms, legalName, username, email, ip, referrer, serverTimestamp });
       } catch (err) {
         console.error("Failed to save CLA sign information");
         res.writeHead(302, {
@@ -77,7 +78,7 @@ export const routes = {
         return res.end();
       }
       try {
-        await afterCLA(app, { terms, username, email, ip, referrer, serverTimestamp });
+        await afterCLA(app, { terms, legalName, username, email, ip, referrer, serverTimestamp });
       } catch (err) {
         //TODO: Ask contributor to inform PR reviewers that the CLA has been signed
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
@@ -89,6 +90,7 @@ export const routes = {
               <ul>\
                 <li>Your GitHub Username: <strong>"+ username + "</strong></li>\
                 <li>Your Email: <strong>"+ email + "</strong></li>\
+                <li>Your Name: <strong>"+ legalName + "</strong></li>\
               </ul>\
             2. Please ask PR reviewers to manually verify your CLA submission.< br /><br/><br/>\
           Note: Only one CLA submission is required, irrespective of number of PRs you raised.\
@@ -114,6 +116,7 @@ export const routes = {
             <ul>\
               <li>Your GitHub Username: <strong>"+ username + "</strong></li>\
               <li>Your Email: <strong>"+ email + "</strong></li>\
+              <li>Your Name: <strong>"+ legalName + "</strong></li>\
             </ul>\
           2. Please contact PR Reviewers to verify your CLA submission.<br/><br/><br/>\
           Note: Only one CLA submission is required, irrespective of number of PRs you raised.\
