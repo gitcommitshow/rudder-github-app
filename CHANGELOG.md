@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/gitcommitshow/rudder-github-app/compare/v0.7.0...v0.8.0) (2025-01-09)
+
+
+### Features
+
+* add pr filters by status merged after before ([#73](https://github.com/gitcommitshow/rudder-github-app/issues/73)) ([98bc7a1](https://github.com/gitcommitshow/rudder-github-app/commit/98bc7a103bdce1199fb515eb8105e94543656696))
+
 ## [0.7.0](https://github.com/gitcommitshow/rudder-github-app/compare/v0.6.0...v0.7.0) (2024-12-08)
 
 
