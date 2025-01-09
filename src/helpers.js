@@ -557,6 +557,65 @@ export async function getOpenPullRequests(octokit, owner, repo, options) {
   const GITHUB_ORG_MEMBERS = process.env.GITHUB_ORG_MEMBERS
     ? process.env.GITHUB_ORG_MEMBERS.split(",")?.map((item) => item?.trim())
     : null;
+  if (options?.after && /^\d{4}-\d{2}-\d{2}$/.test(options.after)) {
+    query += " created:>=" + options.after;
+  }
+  if (options?.before && /^\d{4}-\d{2}-\d{2}$/.test(options.before)) {
+    query += " created:<=" + options.before;
+  }
+  if (typeof options?.merged === "boolean") {
+    if (!options.merged) {
+      query += " -is:merged";
+    } else {
+      query += " is:merged";
+    }
+  }
+  // Remove results from bots or internal team members
+  BOT_USERS?.forEach((botUser) => (query += " -author:" + botUser));
+  GITHUB_ORG_MEMBERS?.forEach(
+    (orgMember) => (query += " -author:" + orgMember),
+  );
+  const response = await octokit.rest.search.issuesAndPullRequests({
+    q: query,
+    per_page: 100,
+    page: options?.page || 1,
+    sort: "created",
+    order: "desc",
+  });
+  console.log(
+    response?.data?.total_count + " results found for search: " + query,
+  );
+  const humanPRs = response?.data?.items?.filter(
+    (pr) => pr.user && pr.user.type === "User",
+  );
+  return humanPRs;
+}
+
+export async function getPullRequests(octokit, owner, repo, options) {
+  let query =
+    `is:pr` + (repo ? ` repo:${owner + "/" + repo}` : ` org:${owner}`);
+  if (options?.status) {
+    query += " is:" + options.status;
+  }
+  if (options?.after && /^\d{4}-\d{2}-\d{2}$/.test(options.after)) {
+    query += " created:>=" + options.after;
+  }
+  if (options?.before && /^\d{4}-\d{2}-\d{2}$/.test(options.before)) {
+    query += " created:<=" + options.before;
+  }
+  if (typeof options?.merged === "boolean") {
+    if (!options.merged) {
+      query += " -is:merged";
+    } else {
+      query += " is:merged";
+    }
+  }
+  const BOT_USERS = process.env.GITHUB_BOT_USERS
+    ? process.env.GITHUB_BOT_USERS.split(",")?.map((item) => item?.trim())
+    : null;
+  const GITHUB_ORG_MEMBERS = process.env.GITHUB_ORG_MEMBERS
+    ? process.env.GITHUB_ORG_MEMBERS.split(",")?.map((item) => item?.trim())
+    : null;
   // Remove results from bots or internal team members
   BOT_USERS?.forEach((botUser) => (query += " -author:" + botUser));
   GITHUB_ORG_MEMBERS?.forEach(
@@ -606,6 +665,39 @@ export async function getOpenExternalPullRequests(app, owner, repo, options) {
       }
     }
     return openExternalPRs;
+  } catch (err) {
+    return;
+  }
+}
+
+export async function getExternalPullRequests(app, owner, repo, options) {
+  try {
+    const octokit = await getOctokitForOrg(app, owner);
+    if (!octokit) {
+      throw new Error(
+        "Failed to search PR because of undefined octokit intance",
+      );
+    }
+    const allPRs = await getPullRequests(octokit, owner, repo, options);
+    if (!Array.isArray(allPRs)) {
+      return;
+    }
+    // Send only the external PRs
+    const externalPRs = [];
+    for (const pr of allPRs) {
+      try {
+        pr.isExternalContribution = await isExternalContribution(octokit, pr);
+        if (pr.isExternalContribution) {
+          externalPRs.push(pr);
+        }
+      } catch (err) {
+        // Some error occurred, so we cannot deterministically say whether it is an external contribution or not
+        pr.isExternalContribution = undefined;
+        // We are anyways going to send this in the external PR list
+        externalPRs.push(pr);
+      }
+    }
+    return externalPRs;
   } catch (err) {
     return;
   }
@@ -673,7 +765,7 @@ async function isAllowedToWriteToTheRepo(octokit, username, owner, repo) {
     // The app is not installed in that repo
     // Only "metadata:repository" permission is needed for this api, which all gh apps have wherever they are installed
     console.log(
-      "Failed to check if a " +
+      "Failed to check if " +
         username +
         " is allowed to write to " +
         owner +
