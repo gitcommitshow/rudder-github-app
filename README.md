@@ -10,6 +10,10 @@ A Node.js server for GitHub app to assist external contributors and save maintai
 - [ ] On `integrations-config` PR merge, psot a comment to join Slack's product-releases channel to get notified when that integration goes live
 - [ ] On `integrations-config` PR merge, post a comment to raise PR in `rudder-docs`
 - [x] List of open PRs by external contributors
+- [ ] Automated docs/code improvement pipeline
+  - [ ] Configuration page or a labelled gh issue - directory/filename, no. of tiny PRs per week, no. of big PRs every month, changes per file
+  - [ ] Review files based on configurations, prioritize, and create issues with instructions for the change
+  - [ ] On issue approval (label change), execute the task (the code change), and raise PR
 
 ## Requirements
 
