@@ -7,6 +7,10 @@ class Slack {
     this.defaultMessageChannelWebhook = process.env.SLACK_DEFAULT_MESSAGE_CHANNEL_WEBHOOK_URL;
   }
 
+  static isConfigured() {
+    return !!this.defaultMessageChannelWebhook;
+  }
+
   static async sendMessage(message, {
     webhookUrl = this.defaultMessageChannelWebhook
   }) {
@@ -31,6 +35,7 @@ class Slack {
     if (!response.ok) {
       throw new Error(`Slack API error: ${response.status} ${response.statusText}`);
     }
+    console.log(`Successfully sent message to Slack: ${message}`);
   }
 }
 
