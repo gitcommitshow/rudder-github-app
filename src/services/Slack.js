@@ -4,15 +4,14 @@
 
 class Slack {
   constructor() {
-    this.defaultMessageChannelWebhook = process.env.SLACK_DEFAULT_MESSAGE_CHANNEL_WEBHOOK_URL;
   }
 
   static isConfigured() {
-    return !!this.defaultMessageChannelWebhook;
+    return !!process.env.SLACK_DEFAULT_MESSAGE_CHANNEL_WEBHOOK_URL;
   }
 
   static async sendMessage(message, {
-    webhookUrl = this.defaultMessageChannelWebhook
+    webhookUrl = process.env.SLACK_DEFAULT_MESSAGE_CHANNEL_WEBHOOK_URL
   }) {
     if (!webhookUrl) {
       throw new Error("Slack webhook URL is not set");
