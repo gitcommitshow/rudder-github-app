@@ -13,7 +13,7 @@ import {
   isCLARequired,
   isMessageAfterMergeRequired,
 } from "./src/helpers.js";
-import { Slack } from "./src/services/Slack.js";
+import Slack from "./src/services/Slack.js";
 
 try {
   const packageJson = await import("./package.json", {
