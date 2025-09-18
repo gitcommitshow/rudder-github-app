@@ -117,6 +117,11 @@ app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
         body: comment,
       });
     }
+    if(label.name?.toLowerCase() === "product review") {
+      console.log("Sending message to the product review channel");
+      const message = `:mag: <${pull_request.html_url}|#${pull_request.number}: ${pull_request.title}> by ${pull_request.user.login}`;
+      await Slack.sendMessage(message);
+    }
   } catch (error) {
     if (error.response) {
       console.error(
@@ -166,7 +171,7 @@ app.webhooks.on("pull_request.closed", async ({ octokit, payload }) => {
 app.webhooks.on("issues.opened", async ({ octokit, payload }) => {
   console.log(`Received a new issue event for #${payload.issue.number}`);
   try {
-    // Docs for octokit.rest.issues.createComment - https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs/issues/createComment.md 
+    // Docs for octokit.rest.issues.createComment - https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs/issues/createComment.md
     await octokit.rest.issues.createComment({
       owner: payload.repository.owner.login,
       repo: payload.repository.name,
