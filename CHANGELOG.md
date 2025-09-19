@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.0](https://github.com/gitcommitshow/rudder-github-app/compare/v0.8.0...v0.9.0) (2025-09-19)
+
+
+### Features
+
+* notify on slack when product review label is added ([#82](https://github.com/gitcommitshow/rudder-github-app/issues/82)) ([b7b1822](https://github.com/gitcommitshow/rudder-github-app/commit/b7b182245d8bd6a4cfc00f0c0ffba103bf9194fe))
+
+
+### Bug Fixes
+
+* website address fallback when not set ([#85](https://github.com/gitcommitshow/rudder-github-app/issues/85)) ([14ca75a](https://github.com/gitcommitshow/rudder-github-app/commit/14ca75ace3a6e4088df05055155529cfda6d2766))
+
 ## [0.8.0](https://github.com/gitcommitshow/rudder-github-app/compare/v0.7.0...v0.8.0) (2025-01-09)
 
 
