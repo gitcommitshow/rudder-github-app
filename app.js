@@ -13,6 +13,7 @@ import {
   isCLARequired,
   isMessageAfterMergeRequired,
 } from "./src/helpers.js";
+import Slack from "./src/services/Slack.js";
 
 try {
   const packageJson = await import("./package.json", {
@@ -117,10 +118,15 @@ app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
         body: comment,
       });
     }
+    if(label.name?.toLowerCase() === "product review" && Slack.isConfigured()) {
+      console.log("Sending message to the product review channel");
+      const message = `:mag: <${pull_request.html_url}|#${pull_request.number}: ${pull_request.title}> by ${pull_request.user?.login}`;
+      await Slack.sendMessage(message);
+    }
   } catch (error) {
     if (error.response) {
       console.error(
-        `Error! Status: ${error.response.status}. Message: ${error.response.data.message}`
+        `Error! Status: ${error.response?.status}. Message: ${error.response?.data?.message}`
       );
     } else {
       console.error(error);
@@ -166,7 +172,7 @@ app.webhooks.on("pull_request.closed", async ({ octokit, payload }) => {
 app.webhooks.on("issues.opened", async ({ octokit, payload }) => {
   console.log(`Received a new issue event for #${payload.issue.number}`);
   try {
-    // Docs for octokit.rest.issues.createComment - https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs/issues/createComment.md 
+    // Docs for octokit.rest.issues.createComment - https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs/issues/createComment.md
     await octokit.rest.issues.createComment({
       owner: payload.repository.owner.login,
       repo: payload.repository.name,

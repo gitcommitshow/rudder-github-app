@@ -11,7 +11,7 @@
   "tasks": {
     "server": {
       "name": "server",
-      "command": "npm start"
+      "command": "npm run staging"
     },
     "lint": {
       "name": "lint",
@@ -19,7 +19,7 @@
     },
     "n": {
       "name": "n",
-      "command": "npm start",
+      "command": "npm run staging",
       "runAtStart": true,
       "preview": {
         "port": 3000
