@@ -2,6 +2,7 @@ import { storage } from "./storage.js";
 import { resolve } from "path";
 import { PROJECT_ROOT_PATH } from "./config.js";
 import url from "node:url";
+import GitHub from "./services/GitHub.js";
 
 function isOneCLAPerOrgEnough() {
   return process.env.ONE_CLA_PER_ORG?.toLowerCase()?.trim() === "true"

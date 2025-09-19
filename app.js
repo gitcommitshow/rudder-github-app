@@ -16,7 +16,7 @@ import {
 
 try {
   const packageJson = await import("./package.json", {
-    assert: { type: "json" },
+    with: { type: "json" },
   });
   var APP_VERSION = packageJson.default.version;
 } catch (err) {
