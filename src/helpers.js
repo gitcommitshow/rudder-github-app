@@ -4,7 +4,7 @@ import { PROJECT_ROOT_PATH } from "./config.js";
 import url from "node:url";
 import GitHub from "./services/GitHub.js";
 
-function isOneCLAPerOrgEnough() {
+export function isOneCLAPerOrgEnough() {
   return process.env.ONE_CLA_PER_ORG?.toLowerCase()?.trim() === "true"
     ? true
     : false;
