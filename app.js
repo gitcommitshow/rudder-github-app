@@ -4,17 +4,15 @@ dotenv.config();
 import fs from "fs";
 import http from "http";
 import url from "url";
-import { Octokit, App } from "octokit";
-import { createNodeMiddleware } from "@octokit/webhooks";
 import { routes } from "./src/routes.js";
+import GitHub from "./src/services/GitHub.js";
+import Slack from "./src/services/Slack.js";
 import {
-  verifyGitHubAppAuthenticationAndAccess,
   getMessage,
   isCLARequired,
   isMessageAfterMergeRequired,
   getWebsiteAddress,
 } from "./src/helpers.js";
-import Slack from "./src/services/Slack.js";
 
 try {
   const packageJson = await import("./package.json", {
@@ -26,48 +24,39 @@ try {
 }
 console.log(`Application version: ${APP_VERSION}`);
 
-// Set configured values
-const appId = process.env.APP_ID;
-// To add GitHub App Private Key directly as a string config (instead of file), convert it to base64 by running following command
-// openssl base64 -in /path/to/original-private-key.pem -out ./base64EncodedKey.txt -A
-// Then set GITHUB_APP_PRIVATE_KEY_BASE64 environment variable with the value of ./base64EncodedKey.txt content
-const GITHUB_APP_PRIVATE_KEY = process.env.GITHUB_APP_PRIVATE_KEY_BASE64
-  ? Buffer.from(process.env.GITHUB_APP_PRIVATE_KEY_BASE64, "base64").toString(
+function bootstrapGitHubApp(){
+  // Set configured values
+  const appId = process.env.APP_ID;
+  // To add GitHub App Private Key directly as a string config (instead of file), convert it to base64 by running following command
+  // openssl base64 -in /path/to/original-private-key.pem -out ./base64EncodedKey.txt -A
+  // Then set GITHUB_APP_PRIVATE_KEY_BASE64 environment variable with the value of ./base64EncodedKey.txt content
+  const GITHUB_APP_PRIVATE_KEY = process.env.GITHUB_APP_PRIVATE_KEY_BASE64
+    ? Buffer.from(process.env.GITHUB_APP_PRIVATE_KEY_BASE64, "base64").toString(
+        "utf8"
+      )
+    : null;
+  const privateKey =
+    GITHUB_APP_PRIVATE_KEY ||
+    fs.readFileSync(
+      process.env.PRIVATE_KEY_PATH || "./GITHUB_APP_PRIVATE_KEY.pem",
       "utf8"
-    )
-  : null;
-const privateKey =
-  GITHUB_APP_PRIVATE_KEY ||
-  fs.readFileSync(
-    process.env.PRIVATE_KEY_PATH || "./GITHUB_APP_PRIVATE_KEY.pem",
-    "utf8"
-  );
-const secret = process.env.WEBHOOK_SECRET;
-const enterpriseHostname = process.env.ENTERPRISE_HOSTNAME;
+    );
+  const webhookSecret = process.env.WEBHOOK_SECRET;
+  const enterpriseHostname = process.env.ENTERPRISE_HOSTNAME;
+  // Create an authenticated Octokit client authenticated as a GitHub App
+  GitHub.authenticateApp(appId, privateKey, webhookSecret, enterpriseHostname);
+}
 
-// Create an authenticated Octokit client authenticated as a GitHub App
-const app = new App({
-  appId,
-  privateKey,
-  webhooks: {
-    secret,
-  },
-  ...(enterpriseHostname && {
-    Octokit: Octokit.defaults({
-      baseUrl: `https://${enterpriseHostname}/api/v3`,
-    }),
-  }),
-});
-await verifyGitHubAppAuthenticationAndAccess(app);
-
+bootstrapGitHubApp();
+await GitHub.verifyGitHubAppAuthenticationAndAccess();
 // Optional: Get & log the authenticated app's name
-const { data } = await app.octokit.request("/app");
+const data = await GitHub.getAppInfo();
 
 // Read more about custom logging: https://github.com/octokit/core.js#logging
-app.octokit.log.debug(`Authenticated as '${data.name}'`);
+GitHub.app.octokit.log.debug(`Authenticated as '${data.name}'`);
 
 // Subscribe to the "pull_request.opened" webhook event
-app.webhooks.on("pull_request.opened", async ({ octokit, payload }) => {
+GitHub.app.webhooks.on("pull_request.opened", async ({ octokit, payload }) => {
   console.log(
     `Received a pull request event for #${payload.pull_request.number} by ${payload.pull_request.user.type}: ${payload.pull_request.user.login}`
   );
@@ -95,7 +84,7 @@ app.webhooks.on("pull_request.opened", async ({ octokit, payload }) => {
   }
 });
 
-app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
+GitHub.app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
   const { number, pull_request, label, sender, repository, action } = payload;
   console.log(
     `Label #${label.name} ${action} by ${sender.login} on ${pull_request.issue_url} : ${pull_request.title}`
@@ -134,7 +123,7 @@ app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
   }
 });
 
-app.webhooks.on("pull_request.closed", async ({ octokit, payload }) => {
+GitHub.app.webhooks.on("pull_request.closed", async ({ octokit, payload }) => {
   console.log(
     `Closed a pull request event for #${payload.pull_request.number}`
   );
@@ -169,7 +158,7 @@ app.webhooks.on("pull_request.closed", async ({ octokit, payload }) => {
   }
 });
 
-app.webhooks.on("issues.opened", async ({ octokit, payload }) => {
+GitHub.app.webhooks.on("issues.opened", async ({ octokit, payload }) => {
   console.log(`Received a new issue event for #${payload.issue.number}`);
   try {
     // Docs for octokit.rest.issues.createComment - https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs/issues/createComment.md
@@ -190,7 +179,7 @@ app.webhooks.on("issues.opened", async ({ octokit, payload }) => {
   }
 });
 
-app.webhooks.on("push", async ({ payload }) => {
+GitHub.app.webhooks.on("push", async ({ payload }) => {
   // Pull out the branch and repo name from the payload
   const branch = payload.ref.split("/").pop();
   const repo = payload.repository.name;
@@ -198,7 +187,7 @@ app.webhooks.on("push", async ({ payload }) => {
 });
 
 // Optional: Handle errors
-app.webhooks.onError((error) => {
+GitHub.app.webhooks.onError((error) => {
   if (error.name === "AggregateError") {
     // Log Secret verification errors
     console.log(`Error processing request: ${error.event}`);
@@ -214,9 +203,9 @@ const localWebhookUrl = `http://localhost:${port}${webhookPath}`;
 const publicWebhookUrl = getWebsiteAddress() + webhookPath;
 
 // See https://github.com/octokit/webhooks.js/#createnodemiddleware for all options
-const middleware = createNodeMiddleware(app.webhooks, { path: webhookPath });
+const githubWebhookRequestHandler = GitHub.getWebhookRequestHandler(webhookPath);
 
-http
+const server = http
   .createServer((req, res) => {
     const parsedUrl = url.parse(req.url);
     const pathWithoutQuery = parsedUrl.pathname;
@@ -224,6 +213,9 @@ http
     console.log(req.method + " " + pathWithoutQuery);
     if (queryString) console.log(queryString.substring(0, 20) + "...");
     switch (req.method + " " + pathWithoutQuery) {
+      case "POST /api/webhook":
+        githubWebhookRequestHandler(req, res);
+        break;
       case "GET /":
         routes.home(req, res);
         break;
@@ -237,22 +229,19 @@ http
         routes.download(req, res);
         break;
       case "POST /cla":
-        routes.submitCla(req, res, app);
+        routes.submitCla(req, res);
         break;
       case "GET /contributions/sync":
-        routes.syncPullRequests(req, res, app);
+        routes.syncPullRequests(req, res);
         break;
       case "GET /contributions":
-        routes.listPullRequests(req, res, app);
+        routes.listPullRequests(req, res);
         break;
       case "GET /contributions/pr":
-        routes.getPullRequestDetail(req, res, app);
+        routes.getPullRequestDetail(req, res);
         break;
       case "GET /contributions/reset":
-        routes.resetContributionData(req, res, app);
-        break;
-      case "POST /api/webhook":
-        middleware(req, res);
+        routes.resetContributionData(req, res);
         break;
       default:
         routes.default(req, res);
@@ -269,3 +258,5 @@ http
       `\n   Public webhook url: ${publicWebhookUrl}`);
     console.log("Press Ctrl + C to quit.");
   });
+
+export { server };

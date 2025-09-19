@@ -79,7 +79,7 @@ describe('afterCLA', function() {
     });
 
     // Call the afterCLA function
-    await afterCLA(app, claSignatureInfo);
+    await afterCLA(claSignatureInfo);
 
     // Verify that removeLabel was called
     expect(removeLabelStub.calledOnce).to.be.true;
@@ -108,7 +108,7 @@ describe('afterCLA', function() {
     });
 
     // Call the afterCLA function
-    await afterCLA(app, claSignatureInfo);
+    await afterCLA(claSignatureInfo);
 
     // Verify that removeLabel was not called
     expect(app.octokit.rest.issues.removeLabel.called).to.be.false;
@@ -119,7 +119,7 @@ describe('afterCLA', function() {
     app.octokit.rest.search.issuesAndPullRequests.rejects(new Error('Test error'));
 
     // Call the afterCLA function
-    await afterCLA(app, claSignatureInfo);
+    await afterCLA(claSignatureInfo);
 
     // Verify that removeLabel was not called
     expect(removeLabelStub.called).to.be.false;

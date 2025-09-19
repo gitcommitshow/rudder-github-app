@@ -10,11 +10,9 @@ import {
   queryStringToJson,
   parseUrlQueryParams,
   jsonToCSV,
-  getOpenExternalPullRequests,
-  getPullRequestDetail,
   timeAgo,
-  getExternalPullRequests,
 } from "./helpers.js";
+import GitHub from "./services/GitHub.js";
 import { isPasswordValid } from "./auth.js";
 
 export const routes = {
@@ -50,7 +48,7 @@ export const routes = {
   /**
    * Submit CLA form
    */
-  submitCla(req, res, app) {
+  submitCla(req, res) {
     let body = "";
     req.on("data", (chunk) => {
       body += chunk.toString(); // convert Buffer to string
@@ -91,7 +89,7 @@ export const routes = {
         return res.end();
       }
       try {
-        await afterCLA(app, {
+        await afterCLA({
           terms,
           legalName,
           username,
@@ -211,7 +209,7 @@ export const routes = {
     });
   },
 
-  syncPullRequests(req, res, app) {
+  syncPullRequests(req, res) {
     if (err) {
       res.writeHead(404);
       res.write("Not implemented yet");
@@ -223,7 +221,7 @@ export const routes = {
     return res.end();
   },
 
-  async listPullRequests(req, res, app) {
+  async listPullRequests(req, res) {
     const { org, repo, page, status, after, before, merged } =
       parseUrlQueryParams(req.url) || {};
     if (!org) {
@@ -248,14 +246,14 @@ export const routes = {
       }
     }
     const prs = status
-      ? await getExternalPullRequests(app, org, repo, {
+      ? await GitHub.getExternalPullRequests(org, repo, {
           page: page,
           status: status,
           after: after,
           before: before,
           merged: mergedBoolean,
         })
-      : await getOpenExternalPullRequests(app, org, repo, {
+      : await GitHub.getOpenExternalPullRequests(org, repo, {
           page: page,
           after: after,
           before: before,
@@ -329,7 +327,7 @@ export const routes = {
                   </html>`);
     res.end();
   },
-  async getPullRequestDetail(req, res, app) {
+  async getPullRequestDetail(req, res) {
     const { org, repo, number } = parseUrlQueryParams(req.url) || {};
     if (!org) {
       res.writeHead(400);
@@ -337,7 +335,7 @@ export const routes = {
         "Please add org parameter in the url e.g. ?org=my-github-org-name",
       );
     }
-    const pr = await getPullRequestDetail(app, org, repo, number);
+    const pr = await GitHub.getPullRequestDetail(org, repo, number);
     if (req.headers["content-type"]?.toLowerCase() === "application/json") {
       res.setHeader("Content-Type", "application/json");
       const jsonString = pr
@@ -377,7 +375,7 @@ export const routes = {
                   </script>
                   </html>`);
   },
-  resetContributionData(req, res, app) {
+  resetContributionData(req, res) {
     storage.cache.clear();
     res.writeHead(200, { "Content-Type": "text/html" });
     res.write("Cache cleared");

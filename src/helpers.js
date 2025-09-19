@@ -240,14 +240,14 @@ export async function isOrgMember(octokit, org, username) {
  *   referrer: "https://website.com/cla?org=rudderlabs&repo=rudder-server&prNumber=1234&username=githubUsername", // The URL of the page where the CLA was signed
  *   username: "githubUsername" // The username of the user who signed the CLA,
  * }
- * await afterCLA(app, claSignatureInfo);
+ * await afterCLA(claSignatureInfo);
  */
-export async function afterCLA(app, claSignatureInfo) {
+export async function afterCLA(claSignatureInfo) {
   const { org, username } =
     parseUrlQueryParams(claSignatureInfo?.referrer) || {};
   const githubUsername = claSignatureInfo.username || username;
 
-  if (!org || !githubUsername || !app) {
+  if (!org || !githubUsername || !GitHub.app) {
     console.log("Not enough info to find the related PRs.");
     return;
   }
@@ -258,7 +258,7 @@ export async function afterCLA(app, claSignatureInfo) {
   let failuresToRemoveLabel = 0; // To track the failures in removing labels
   try {
     //TODO: Check if the Octokit instance is already authenticated with an installation ID
-    const octokit = await getOctokitForOrg(app, org);
+    const octokit = await GitHub.getOctokitForOrg(org);
     // Query to find all open PRs created by githubUsername in all org repositories
     const query = `org:${org} is:pr is:open author:${githubUsername}`;
     // GitHub Docs for octokit.rest.search - https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs/search
@@ -440,84 +440,6 @@ export function jsonToCSV(arr) {
 }
 
 /**
- * Authenticate as app installation for the org
- * Authenticating as an app installation lets your app access resources that are owned by the user or organization
- * that installed the app. Authenticating as an app installation is ideal for automation workflows
- * that don't involve user input.
- * Check out { @link https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/about-authentication-with-a-github-app GitHub Docs for Authentication }
- *  and { @tutorial https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-as-a-github-app-installation GitHub Docs for Authenticating App Installation}
- * @param {Object} app
- * @param {string} org
- * @returns
- */
-export async function getOctokitForOrg(app, org) {
-  // Find the installation for the organization
-  for await (const { installation } of app.eachInstallation.iterator()) {
-    if (installation.account.login.toLowerCase() === org.toLowerCase()) {
-      // Create an authenticated client for this installation
-      const octokit = await app.getInstallationOctokit(installation.id);
-      return octokit;
-    }
-  }
-  console.error("No GitHub App installation found for " + org);
-  // Fall back authentication method
-  const DEFAULT_GITHUB_ORG = process.env.DEFAULT_GITHUB_ORG;
-  if (DEFAULT_GITHUB_ORG && org !== DEFAULT_GITHUB_ORG) {
-    return await getOctokitForOrg(app, DEFAULT_GITHUB_ORG);
-  }
-}
-
-export async function verifyGitHubAppAuthenticationAndAccess(app) {
-  console.log("Verifying GitHub App authentication and access...");
-
-  try {
-    // Verify app installation
-    for await (const { installation } of app.eachInstallation.iterator()) {
-      console.log(
-        `\nChecking installation for ${installation.account.login} (${installation.account.type}):`,
-      );
-
-      // Create an authenticated client for this installation
-      const octokit = await app.getInstallationOctokit(installation.id);
-
-      // List repositories the app can access in this installation
-      const repos = await octokit.rest.apps.listReposAccessibleToInstallation();
-      console.log(
-        `- Has access to ${repos.data.repositories.length} repositories:`,
-      );
-      repos.data.repositories.forEach((repo) => {
-        console.log(`  - ${repo.full_name}`);
-      });
-
-      // List the permissions the app has for this installation
-      console.log("- App permissions:");
-      Object.entries(installation.permissions).forEach(([key, value]) => {
-        console.log(`  - ${key}: ${value}`);
-      });
-    }
-    console.log(
-      "\nAuthentication and access verification completed successfully.",
-    );
-  } catch (error) {
-    console.error(
-      "Error during authentication and access verification:",
-      error,
-    );
-    if (error.status === 401) {
-      console.error(
-        "Authentication failed. Please check your app credentials (appId and privateKey).",
-      );
-    } else if (error.status === 403) {
-      console.error(
-        "Authorization failed. The app might not have the required permissions.",
-      );
-    } else {
-      console.error("An unexpected error occurred:", error.message);
-    }
-  }
-}
-
-/**
  * Parses a repository URL to extract the owner and repository name.
  * Supports HTTPS, Git protocol URLs, and API urls
  * @param {string} repoUrl - The repository URL.
@@ -637,72 +559,6 @@ export async function getPullRequests(octokit, owner, repo, options) {
   return humanPRs;
 }
 
-export async function getOpenExternalPullRequests(app, owner, repo, options) {
-  try {
-    const octokit = await getOctokitForOrg(app, owner);
-    if (!octokit) {
-      throw new Error(
-        "Failed to search PR because of undefined octokit intance",
-      );
-    }
-    const openPRs = await getOpenPullRequests(octokit, owner, repo, options);
-    if (!Array.isArray(openPRs)) {
-      return;
-    }
-    // Send only the external PRs
-    const openExternalPRs = [];
-    for (const pr of openPRs) {
-      try {
-        pr.isExternalContribution = await isExternalContribution(octokit, pr);
-        if (pr.isExternalContribution) {
-          openExternalPRs.push(pr);
-        }
-      } catch (err) {
-        // Some error occurred, so we cannot deterministically say whether it is an external contribution or not
-        pr.isExternalContribution = undefined;
-        // We are anyways going to send this in the external open PR list
-        openExternalPRs.push(pr);
-      }
-    }
-    return openExternalPRs;
-  } catch (err) {
-    return;
-  }
-}
-
-export async function getExternalPullRequests(app, owner, repo, options) {
-  try {
-    const octokit = await getOctokitForOrg(app, owner);
-    if (!octokit) {
-      throw new Error(
-        "Failed to search PR because of undefined octokit intance",
-      );
-    }
-    const allPRs = await getPullRequests(octokit, owner, repo, options);
-    if (!Array.isArray(allPRs)) {
-      return;
-    }
-    // Send only the external PRs
-    const externalPRs = [];
-    for (const pr of allPRs) {
-      try {
-        pr.isExternalContribution = await isExternalContribution(octokit, pr);
-        if (pr.isExternalContribution) {
-          externalPRs.push(pr);
-        }
-      } catch (err) {
-        // Some error occurred, so we cannot deterministically say whether it is an external contribution or not
-        pr.isExternalContribution = undefined;
-        // We are anyways going to send this in the external PR list
-        externalPRs.push(pr);
-      }
-    }
-    return externalPRs;
-  } catch (err) {
-    return;
-  }
-}
-
 export function timeAgo(date) {
   if (!date) return "";
   if (typeof date === "string") {
@@ -775,23 +631,6 @@ async function isAllowedToWriteToTheRepo(octokit, username, owner, repo) {
     // console.error(err);
     throw new Error("Failed to check user permission for the repo");
   }
-}
-
-export async function getPullRequestDetail(app, owner, repo, number) {
-  const octokit = await getOctokitForOrg(app, owner);
-  if (!octokit) {
-    throw new Error("Failed to search PR because of undefined octokit intance");
-  }
-  const { data } = await octokit.rest.pulls.get({
-    owner: owner,
-    repo: repo,
-    pull_number: number,
-  });
-  if (!data) return data;
-  const pr = Object.assign({}, data, {
-    isExternalContribution: isExternalContributionMaybe(data),
-  });
-  return pr;
 }
 
 export function getWebsiteAddress() {
