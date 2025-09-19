@@ -800,7 +800,7 @@ export function getWebsiteAddress() {
     return process.env.WEBSITE_ADDRESS;
   }
   const port = process.env.PORT || 3000;
-  // 2: If CodeSandbox, we can construct the address from the sandbox url
+  // 2: Construct url for the staging server on CodeSandbox
   if (process.env.CODESANDBOX_HOST) {
     return `https://${process.env.HOSTNAME}-${port}.csb.app`;
   }
