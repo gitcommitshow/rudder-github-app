@@ -11,6 +11,7 @@ import {
   parseUrlQueryParams,
   jsonToCSV,
   timeAgo,
+  isOneCLAPerOrgEnough,
 } from "./helpers.js";
 import GitHub from "./services/GitHub.js";
 import { isPasswordValid } from "./auth.js";
@@ -252,13 +253,15 @@ export const routes = {
           after: after,
           before: before,
           merged: mergedBoolean,
-        })
+          isOneCLAPerOrgEnough: isOneCLAPerOrgEnough(),
+        }, storage.cache)
       : await GitHub.getOpenExternalPullRequests(org, repo, {
           page: page,
           after: after,
           before: before,
           merged: mergedBoolean,
-        });
+          isOneCLAPerOrgEnough: isOneCLAPerOrgEnough(),
+        }, storage.cache);
     if (req.headers["content-type"]?.toLowerCase() === "application/json") {
       res.setHeader("Content-Type", "application/json");
       const jsonString = prs
@@ -335,7 +338,9 @@ export const routes = {
         "Please add org parameter in the url e.g. ?org=my-github-org-name",
       );
     }
-    const pr = await GitHub.getPullRequestDetail(org, repo, number);
+    const pr = await GitHub.getPullRequestDetail(org, repo, number, {
+      isOneCLAPerOrgEnough: isOneCLAPerOrgEnough(),
+    }, storage.cache);
     if (req.headers["content-type"]?.toLowerCase() === "application/json") {
       res.setHeader("Content-Type", "application/json");
       const jsonString = pr

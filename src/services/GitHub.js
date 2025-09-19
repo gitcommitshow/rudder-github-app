@@ -161,9 +161,10 @@ class GitHub {
    * @param {string} owner - Repository owner
    * @param {string} repo - Repository name
    * @param {Object} options - Options
+   * @param {Object} cache - Cache object with get/set methods
    * @returns {Promise<Array>} - Array of pull requests
    */
-  async getExternalPullRequests(owner, repo, options) {
+  async getExternalPullRequests(owner, repo, options, cache) {
     try {
       const octokit = await this.getOctokitForOrg(owner);
       if (!octokit) {
@@ -179,7 +180,7 @@ class GitHub {
       const externalPRs = [];
       for (const pr of allPRs) {
         try {
-          pr.isExternalContribution = await this.isExternalContribution(octokit, pr);
+          pr.isExternalContribution = await this.isExternalContribution(octokit, pr, options.isOneCLAPerOrgEnough, cache);
           if (pr.isExternalContribution) {
             externalPRs.push(pr);
           }
@@ -201,9 +202,10 @@ class GitHub {
    * @param {string} owner - Repository owner
    * @param {string} repo - Repository name
    * @param {Object} options - Options
+   * @param {Object} cache - Cache object with get/set methods
    * @returns {Promise<Array>} - Array of pull requests
    */
-  async getOpenExternalPullRequests(owner, repo, options) {
+  async getOpenExternalPullRequests(owner, repo, options, cache) {
     try {
       const octokit = await this.getOctokitForOrg(owner);
       if (!octokit) {
@@ -219,7 +221,7 @@ class GitHub {
       const openExternalPRs = [];
       for (const pr of openPRs) {
         try {
-          pr.isExternalContribution = await isExternalContribution(octokit, pr);
+          pr.isExternalContribution = await this.isExternalContribution(octokit, pr, options.isOneCLAPerOrgEnough, cache);
           if (pr.isExternalContribution) {
             openExternalPRs.push(pr);
           }
@@ -242,9 +244,12 @@ class GitHub {
    * @param {string} owner - Repository owner
    * @param {string} repo - Repository name
    * @param {number} number - Pull request number
+   * @param {Object} options - Options
+   * @param {boolean} options.isOneCLAPerOrgEnough - Whether one CLA per org is enough
+   * @param {Object} cache - Cache object with get/set methods
    * @returns {Promise<Object>} - Pull request detail
    */
-  async getPullRequestDetail(owner, repo, number) {
+  async getPullRequestDetail(owner, repo, number, options, cache) {
     const octokit = await this.getOctokitForOrg(owner);
     if (!octokit) {
       throw new Error("Failed to search PR because of undefined octokit intance");
@@ -256,7 +261,7 @@ class GitHub {
     });
     if (!data) return data;
     const pr = Object.assign({}, data, {
-      isExternalContribution: isExternalContributionMaybe(data),
+      isExternalContribution: this.isExternalContributionMaybe(data, options.isOneCLAPerOrgEnough, cache),
     });
     return pr;
   }
@@ -308,7 +313,7 @@ class GitHub {
         owner,
         repo,
         files,
-        pullNumber
+        pullNumber,
       );
 
       // Get the diff for context
@@ -331,6 +336,205 @@ class GitHub {
       throw new Error(`Failed to get PR changes: ${error.message}`);
     }
   }
+
+
+  /**
+ * Whether a pull request is a contribution by external user who has bot been associated with the repo
+ * @param {Object} pullRequest
+ * @param {boolean} isOneCLAPerOrgEnough
+ * @param {Object} cache - Cache object with get/set methods
+ * @returns {boolean | undefined} - boolean when confirmed, undefined when not confirmed
+ */
+isExternalContributionMaybe(pullRequest, isOneCLAPerOrgEnough, cache) {
+  const { owner, repo } =
+    this.parseRepoUrl(
+      pullRequest?.repository_url || pullRequest?.base?.repo?.html_url,
+    ) || {};
+  const username = pullRequest?.user?.login;
+  if (typeof pullRequest?.author_association === "string") {
+    // OWNER: Author is the owner of the repository.
+    // MEMBER: Author is a member of the organization that owns the repository.
+    // COLLABORATOR: Author has been invited to collaborate on the repository.
+    // CONTRIBUTOR: Author has previously committed to the repository.
+    // FIRST_TIMER: Author has not previously committed to GitHub.
+    // FIRST_TIME_CONTRIBUTOR: Author has not previously committed to the repository.
+    // MANNEQUIN: Author is a placeholder for an unclaimed user.
+    // NONE: Author has no association with the repository (or doesn't want to make his association public).
+    switch (pullRequest.author_association.toUpperCase()) {
+      case "OWNER":
+        pullRequest.isExternalContribution = false;
+        if (cache && cache.set) {
+          cache.set(
+            false,
+            username,
+            "contribution",
+            "external",
+            owner,
+            isOneCLAPerOrgEnough ? undefined : repo,
+          );
+        }
+        return false;
+      case "MEMBER":
+        pullRequest.isExternalContribution = false;
+        if (cache && cache.set) {
+          cache.set(
+            false,
+            username,
+            "contribution",
+            "external",
+            owner,
+            isOneCLAPerOrgEnough ? undefined : repo,
+          );
+        }
+        return false;
+      case "COLLABORATOR":
+        pullRequest.isExternalContribution = false;
+        if (cache && cache.set) {
+          cache.set(
+            false,
+            username,
+            "contribution",
+            "external",
+            owner,
+            isOneCLAPerOrgEnough ? undefined : repo,
+          );
+        }
+        return false;
+      default:
+        //Will need more checks to verify author relation with the repo
+        break;
+    }
+  }
+  if (
+    pullRequest?.head?.repo?.full_name !== pullRequest?.base?.repo?.full_name
+  ) {
+    pullRequest.isExternalContribution = true;
+    if (cache && cache.set) {
+      cache.set(
+        true,
+        username,
+        "contribution",
+        "external",
+        owner,
+        isOneCLAPerOrgEnough ? undefined : repo,
+      );
+    }
+    return true;
+  } else if (
+    pullRequest?.head?.repo?.full_name &&
+    pullRequest?.base?.repo?.full_name
+  ) {
+    pullRequest.isExternalContribution = false;
+    if (cache && cache.set) {
+      cache.set(
+        false,
+        username,
+        "contribution",
+        "external",
+        owner,
+        isOneCLAPerOrgEnough ? undefined : repo,
+      );
+    }
+    return false;
+  }
+  // Utilize cache if possible
+  const isConfirmedToBeExternalContributionInPast = cache && cache.get ? cache.get(
+    username,
+    "contribution",
+    "external",
+    owner,
+    isOneCLAPerOrgEnough ? undefined : repo,
+  ) : undefined;
+  if (typeof isConfirmedToBeExternalContributionInPast === "boolean") {
+    pullRequest.isExternalContribution =
+      isConfirmedToBeExternalContributionInPast;
+    return isConfirmedToBeExternalContributionInPast;
+  }
+  // Ambigous results after this point.
+  // Cannot confirm whether an external contribution or not.
+  // Need more reliable check.
+  return undefined;
+}
+
+/**
+ * Whether a pull request is a contribution by external user who has not been associated with the repo
+ * @param {Object} octokit - Authenticated Octokit instance
+ * @param {Object} pullRequest - Pull request object
+ * @param {boolean} isOneCLAPerOrgEnough
+ * @param {Object} cache - Cache object with get/set methods
+ * @returns {Promise<boolean | undefined>} - boolean when confirmed, undefined when not confirmed
+ */
+async isExternalContribution(octokit, pullRequest, isOneCLAPerOrgEnough, cache) {
+  const probablisticResult = this.isExternalContributionMaybe(pullRequest, isOneCLAPerOrgEnough, cache);
+  if (typeof probablisticResult === "boolean") {
+    // Boolean is returned when the probabilistic check is sufficient
+    return probablisticResult;
+  }
+  const username = pullRequest?.user?.login;
+  const { owner, repo } =
+    this.parseRepoUrl(
+      pullRequest?.repository_url || pullRequest?.base?.repo?.html_url,
+    ) || {};
+  //TODO: Handle failure in checking permissions for the user
+  const deterministicPermissionCheck = await this.isAllowedToWriteToTheRepo(
+    octokit,
+    username,
+    owner,
+    repo,
+  );
+  pullRequest.isExternalContribution = deterministicPermissionCheck;
+  if (cache && cache.set) {
+    cache.set(
+      deterministicPermissionCheck,
+      username,
+      "contribution",
+      "external",
+      owner,
+      isOneCLAPerOrgEnough ? undefined : repo,
+    );
+  }
+  return deterministicPermissionCheck;
+}
+
+/**
+ * Check user permissions for a repository
+ * The authenticating octokit instance must have "Metadata" repository permissions (read)
+ * @param {Object} octokit - Authenticated Octokit instance
+ * @param {string} username
+ * @param {string} owner
+ * @param {string} repo
+ * @returns {Promise<boolean>}
+ */
+async isAllowedToWriteToTheRepo(octokit, username, owner, repo) {
+  try {
+    const result = await octokit.rest.repos.getCollaboratorPermissionLevel({
+      owner,
+      repo,
+      username,
+    });
+    if (["admin", "write"].includes(result?.permission)) {
+      return true;
+    }
+    if (["admin", "maintain", "write"].includes(result?.role_name)) {
+      return true;
+    }
+    return false;
+  } catch (err) {
+    // If 403 error "HttpError: Resource not accessible by integration"
+    // The app is not installed in that repo
+    // Only "metadata:repository" permission is needed for this api, which all gh apps have wherever they are installed
+    console.log(
+      "Failed to check if " +
+        username +
+        " is allowed to write to " +
+        owner +
+        "/" +
+        repo,
+    );
+    // console.error(err);
+    throw new Error("Failed to check user permission for the repo");
+  }
+}
 
   /**
    * Filter files to exclude tests and get file content
@@ -434,6 +638,144 @@ class GitHub {
       },
     };
   }
+
+  /**
+   * Get open pull requests
+   * @param {Object} octokit - Authenticated Octokit instance
+   * @param {string} owner - Repository owner
+   * @param {string} repo - Repository name
+   * @param {Object} options - Options
+   * @returns {Promise<Array>} - Array of pull requests
+   */
+  async getOpenPullRequests(octokit, owner, repo, options) {
+    let query =
+      `is:pr is:open` + (repo ? ` repo:${owner + "/" + repo}` : ` org:${owner}`);
+    const BOT_USERS = process.env.GITHUB_BOT_USERS
+      ? process.env.GITHUB_BOT_USERS.split(",")?.map((item) => item?.trim())
+      : null;
+    const GITHUB_ORG_MEMBERS = process.env.GITHUB_ORG_MEMBERS
+      ? process.env.GITHUB_ORG_MEMBERS.split(",")?.map((item) => item?.trim())
+      : null;
+    if (options?.after && /^\d{4}-\d{2}-\d{2}$/.test(options.after)) {
+      query += " created:>=" + options.after;
+    }
+    if (options?.before && /^\d{4}-\d{2}-\d{2}$/.test(options.before)) {
+      query += " created:<=" + options.before;
+    }
+    if (typeof options?.merged === "boolean") {
+      if (!options.merged) {
+        query += " -is:merged";
+      } else {
+        query += " is:merged";
+      }
+    }
+    // Remove results from bots or internal team members
+    BOT_USERS?.forEach((botUser) => (query += " -author:" + botUser));
+    GITHUB_ORG_MEMBERS?.forEach(
+      (orgMember) => (query += " -author:" + orgMember),
+    );
+    const response = await octokit.rest.search.issuesAndPullRequests({
+      q: query,
+      per_page: 100,
+      page: options?.page || 1,
+      sort: "created",
+      order: "desc",
+    });
+    console.log(
+      response?.data?.total_count + " results found for search: " + query,
+    );
+    const humanPRs = response?.data?.items?.filter(
+      (pr) => pr.user && pr.user.type === "User",
+    );
+    return humanPRs;
+  }
+
+  /**
+   * Get pull requests
+   * @param {Object} octokit - Authenticated Octokit instance
+   * @param {string} owner - Repository owner
+   * @param {string} repo - Repository name
+   * @param {Object} options - Options
+   * @returns {Promise<Array>} - Array of pull requests
+   */
+  async getPullRequests(octokit, owner, repo, options) {
+    let query =
+      `is:pr` + (repo ? ` repo:${owner + "/" + repo}` : ` org:${owner}`);
+    if (options?.status) {
+      query += " is:" + options.status;
+    }
+    if (options?.after && /^\d{4}-\d{2}-\d{2}$/.test(options.after)) {
+      query += " created:>=" + options.after;
+    }
+    if (options?.before && /^\d{4}-\d{2}-\d{2}$/.test(options.before)) {
+      query += " created:<=" + options.before;
+    }
+    if (typeof options?.merged === "boolean") {
+      if (!options.merged) {
+        query += " -is:merged";
+      } else {
+        query += " is:merged";
+      }
+    }
+    const BOT_USERS = process.env.GITHUB_BOT_USERS
+      ? process.env.GITHUB_BOT_USERS.split(",")?.map((item) => item?.trim())
+      : null;
+    const GITHUB_ORG_MEMBERS = process.env.GITHUB_ORG_MEMBERS
+      ? process.env.GITHUB_ORG_MEMBERS.split(",")?.map((item) => item?.trim())
+      : null;
+    // Remove results from bots or internal team members
+    BOT_USERS?.forEach((botUser) => (query += " -author:" + botUser));
+    GITHUB_ORG_MEMBERS?.forEach(
+      (orgMember) => (query += " -author:" + orgMember),
+    );
+    const response = await octokit.rest.search.issuesAndPullRequests({
+      q: query,
+      per_page: 100,
+      page: options?.page || 1,
+      sort: "created",
+      order: "desc",
+    });
+    console.log(
+      response?.data?.total_count + " results found for search: " + query,
+    );
+    const humanPRs = response?.data?.items?.filter(
+      (pr) => pr.user && pr.user.type === "User",
+    );
+    return humanPRs;
+  }
+
+/**
+ * Parses a repository URL to extract the owner and repository name.
+ * Supports HTTPS, Git protocol URLs, and API urls
+ * @param {string} repoUrl - The repository URL.
+ * @returns {object|null} - An object with owner and repo, or null if parsing fails.
+ */
+ parseRepoUrl(repoUrl) {
+  try {
+    const url = new URL(repoUrl);
+
+    // Extract pathname and split into segments
+    // e.g. https://api.github.com/repos/Git-Commit-Show/gcs-cli
+    const pathname = url.pathname.replace(/\.git$/, ""); // Remove .git suffix if present
+    const segments = pathname
+      .split("/")
+      .filter((segment) => segment.length > 0);
+
+    if (segments.length < 2) {
+      return null; // Not enough segments to determine owner and repo
+    }
+
+    return {
+      owner: segments[segments.length - 2],
+      repo: segments[segments.length - 1],
+    };
+  } catch (error) {
+    //TODO: Handle cases where URL constructor fails (e.g., SSH URLs)
+    return null;
+  }
+}
+
+
 }
 
 export default new GitHub();
