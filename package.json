@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "lint": "standard",
+    "proxy": "PORT=3000 & ./node_modules/.bin/smee -u $SMEE_URL -t https://$HOSTNAME-3000.csb.app/api/webhook",
     "start": "node app.js",
+    "staging": "npm run proxy & npm start",
     "test": "RUN_E2E_TESTS=true ./node_modules/.bin/mocha test/lifecycle.test.js test/**/*.test.js",
     "test:integration": "./node_modules/.bin/mocha test/lifecycle.test.js test/integration/**/*.test.js",
     "test:e2e": "RUN_E2E_TESTS=true ./node_modules/.bin/mocha test/lifecycle.test.js test/e2e/**/*.test.js"
@@ -16,6 +18,7 @@
     "chai-http": "^5.0.0",
     "mocha": "^10.7.3",
     "sinon": "^19.0.2",
+    "smee-client": "^4.3.1",
     "standard": "^17.0.0"
   },
   "dependencies": {
@@ -23,6 +26,6 @@
     "octokit": "^3.1.2"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20.19.0"
   }
 }
