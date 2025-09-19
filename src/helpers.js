@@ -365,7 +365,7 @@ export function getMessage(name, context) {
   switch (name) {
     case "ask-to-sign-cla":
       const CLA_LINK =
-        process.env.WEBSITE_ADDRESS +
+        getWebsiteAddress() +
         "/cla" +
         `?org=${context.org}&repo=${context.repo}&prNumber=${context.pr_number}&username=${context.username}`;
       message = `Thank you @${context.username} for contributing this PR.
@@ -792,4 +792,22 @@ export async function getPullRequestDetail(app, owner, repo, number) {
     isExternalContribution: isExternalContributionMaybe(data),
   });
   return pr;
+}
+
+export function getWebsiteAddress() {
+  // 1: WEBSITE_ADDRESS if set by the dev
+  if (process.env.WEBSITE_ADDRESS) {
+    return process.env.WEBSITE_ADDRESS;
+  }
+  const port = process.env.PORT || 3000;
+  // 2: Construct url for the staging server on CodeSandbox
+  if (process.env.CODESANDBOX_HOST) {
+    return `https://${process.env.HOSTNAME}-${port}.csb.app`;
+  }
+  if (process.env.NODE_ENV === 'production'){
+    console.error("Admin Notice: WEBSITE_ADDRESS is not set in env. This will break CLA functionality.");
+    return "WEBSITE_ADDRESS_NOT_SET: Contact admin";
+  }
+  // 3: Last resort: localhost
+  return `http://localhost:${port}`;
 }

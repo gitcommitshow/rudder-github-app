@@ -12,6 +12,7 @@ import {
   getMessage,
   isCLARequired,
   isMessageAfterMergeRequired,
+  getWebsiteAddress,
 } from "./src/helpers.js";
 import Slack from "./src/services/Slack.js";
 
@@ -24,7 +25,6 @@ try {
   console.error("Failed to get the version number");
 }
 console.log(`Application version: ${APP_VERSION}`);
-console.log(`Website address: ${process.env.WEBSITE_ADDRESS}`);
 
 // Set configured values
 const appId = process.env.APP_ID;
@@ -211,6 +211,7 @@ app.webhooks.onError((error) => {
 const port = process.env.PORT || 3000;
 const webhookPath = "/api/webhook";
 const localWebhookUrl = `http://localhost:${port}${webhookPath}`;
+const publicWebhookUrl = getWebsiteAddress() + webhookPath;
 
 // See https://github.com/octokit/webhooks.js/#createnodemiddleware for all options
 const middleware = createNodeMiddleware(app.webhooks, { path: webhookPath });
@@ -258,9 +259,13 @@ http
     }
   })
   .listen(port, () => {
-    console.log(`Server is listening for events at: ${localWebhookUrl}`);
     console.log(
-      "Server is also serving the homepage at: http://localhost:" + port
+      "Server is running at:",
+      `\n   Local: http://localhost:${port}`,
+      `\n   Public: ${getWebsiteAddress()}`
     );
+    console.log("Listening for webhook events at:",
+      `\n   Local webhook url: ${localWebhookUrl}`,
+      `\n   Public webhook url: ${publicWebhookUrl}`);
     console.log("Press Ctrl + C to quit.");
   });
