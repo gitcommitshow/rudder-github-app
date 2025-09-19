@@ -12,6 +12,7 @@ import {
   getMessage,
   isCLARequired,
   isMessageAfterMergeRequired,
+  getWebsiteAddress,
 } from "./src/helpers.js";
 import Slack from "./src/services/Slack.js";
 
@@ -24,7 +25,7 @@ try {
   console.error("Failed to get the version number");
 }
 console.log(`Application version: ${APP_VERSION}`);
-console.log(`Website address: ${process.env.WEBSITE_ADDRESS}`);
+console.log(`Website address: ${getWebsiteAddress()}`);
 
 // Set configured values
 const appId = process.env.APP_ID;
