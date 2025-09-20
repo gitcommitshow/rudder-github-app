@@ -4,28 +4,13 @@
 
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
+import { server } from '../../app.js';
 import Github from '../../src/services/GitHub.js';
-import dotenv from 'dotenv';
 
 describe('GitHub Services', function () {
     this.timeout(40000);
-    let server;
-
-    before(async function () {
-        console.log("⚠️ Running github e2e tests with real env vars");
-        dotenv.config();
-        if(!Github.app) {
-            try {
-                ({ server } = await import('../../app.js')); // Bootstrap GitHub App
-            } catch (error) {
-                console.error('Failed to bootstrap GitHub App:', error.message);
-                this.skip(); // Skip tests if bootstrap fails
-            }
-        }
-    });
-
+    
     after(function () {
-        // Cleanup the server
         server.close();
     });
 

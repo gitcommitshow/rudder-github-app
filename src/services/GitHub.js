@@ -10,6 +10,8 @@ class GitHub {
 
   constructor(){
     this.app = null;
+    // The constructor gets executed on import because of immediate execution of export new GitHub()
+    // So, do not include any task that needs to wait for some things to be done (e.g. configuration for GitHub App)
   }
 
   /**
