@@ -8,7 +8,7 @@ import { once } from 'events';
 let appProcess;
 
 before(async function () {
-    this.timeout(35000); // Increase timeout to 35 seconds
+    this.timeout(60000);
 
     if (process.env.RUN_E2E_TESTS === 'true') {
         try {
@@ -25,7 +25,7 @@ before(async function () {
 
                 appProcess.stdout.on('data', (data) => {
                     buffer += data.toString();
-                    if (buffer.includes('Server is listening for events at:')) {
+                    if (buffer.includes('Server is running at:')) {
                         clearTimeout(timeout);
                         console.log('App started for e2e tests');
                         resolve();
@@ -33,10 +33,11 @@ before(async function () {
                 });
 
                 appProcess.stderr.on('data', (data) => {
-                    console.error(`Server error: ${data}`);
+                    console.error(`Server logs: ${data}`);
                 });
 
                 appProcess.on('error', (err) => {
+                    console.error(`Server error: ${err?.message}`);
                     clearTimeout(timeout);
                     reject(new Error(`Failed to start server: ${err.message}`));
                 });

@@ -40,7 +40,7 @@ describe('CLA Routes', function () {
             it('should return 200 status', async function () {
                 const res = await agent
                     .post('/cla')
-                    .send('terms=on&email=test@example.com&username=testGhUser')
+                    .send('terms=on&email=test@example.com&username=testGhUser&legalName=john doe')
                     .redirects(0); // Do not follow redirect
                 expect(res).to.not.redirect;
             });
@@ -52,7 +52,7 @@ describe('CLA Routes', function () {
                 const res = await agent
                     .post('/cla')
                     .send('terms=on&email=test@example.com&username=gitcommitshow&referrer='
-                        + encodeURIComponent(referrer))
+                        + encodeURIComponent(prReferrer))
                     .redirects(0); // Do not follow redirect;
                 expect(res).to.have.status(302);
                 expect(res).to.redirectTo(prReferrer);

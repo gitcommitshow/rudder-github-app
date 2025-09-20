@@ -4,13 +4,14 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
 import { afterCLA } from '../../src/helpers.js';
+import GitHub from '../../src/services/GitHub.js';
 
 describe('afterCLA', function() {
-  let app, claSignatureInfo, removeLabelStub;
+  let claSignatureInfo, removeLabelStub;
 
   beforeEach(function() {
     removeLabelStub = sinon.stub();
-    app = {
+    GitHub.app = {
       octokit: {
         rest: {
           search: {
@@ -22,12 +23,14 @@ describe('afterCLA', function() {
         }
       },
       eachInstallation: {
-        iterator: sinon.stub().returns([{ installation: { id: 1 } }])
+        iterator: sinon.stub().returns([{ installation: { id: 1, account: { login: 'test-org' } } }])
       },
       eachRepository: {
         iterator: sinon.stub().returns([{ octokit: { rest: { issues: { removeLabel: removeLabelStub } } }, repository: { owner: { login: 'test-org' }, name: 'test-repo' } }])
       }
     };
+
+    GitHub.getOctokitForOrg = sinon.stub().resolves(GitHub.app.octokit);
 
     claSignatureInfo = {
       referrer: 'https://website.com/cla?org=test-org&repo=test-repo&prNumber=1234&username=test-user',
@@ -42,7 +45,7 @@ describe('afterCLA', function() {
   it('should process CLA and remove "Pending CLA" label from PRs', async function() {
     // Mock the response from search.issuesAndPullRequests
     // Docs for octokit.rest.search.issuesAndPullRequests - https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs/search/issuesAndPullRequests.md
-    app.octokit.rest.search.issuesAndPullRequests.resolves({
+    GitHub.app.octokit.rest.search.issuesAndPullRequests.resolves({
       data: {
         items: [
           {
@@ -79,22 +82,31 @@ describe('afterCLA', function() {
     });
 
     // Call the afterCLA function
-    await afterCLA(app, claSignatureInfo);
+    await afterCLA(claSignatureInfo);
 
-    // Verify that removeLabel was called
-    expect(removeLabelStub.calledOnce).to.be.true;
-    expect(removeLabelStub.calledWith({
-      owner: 'test-org',
-      repo: 'test-repo',
+    // Verify that removeLabel was called for all 3 PRs by test-user with label "Pending CLA"
+    expect(removeLabelStub.callCount).to.be.equal(3);
+    // test-user PR 1234
+    expect(removeLabelStub.args[0][0]).to.include({
       issue_number: 1234,
       name: 'Pending CLA'
-    })).to.be.true;
+    });
+    // test-user PR 1235
+    expect(removeLabelStub.args[1][0]).to.include({
+      issue_number: 1235,
+      name: 'Pending CLA'
+    });
+    // test-user PR 1236
+    expect(removeLabelStub.args[2][0]).to.include({
+      issue_number: 1236,
+      name: 'Pending CLA'
+    });
   });
 
   it('should skip PRs without "Pending CLA" label', async function() {
     // Mock the response from search.issuesAndPullRequests
     // Docs for octokit.rest.search.issuesAndPullRequests - https://github.com/octokit/plugin-rest-endpoint-methods.js/tree/main/docs/search/issuesAndPullRequests.md
-    app.octokit.rest.search.issuesAndPullRequests.resolves({
+    GitHub.app.octokit.rest.search.issuesAndPullRequests.resolves({
       data: {
         items: [
           {
@@ -108,20 +120,25 @@ describe('afterCLA', function() {
     });
 
     // Call the afterCLA function
-    await afterCLA(app, claSignatureInfo);
+    await afterCLA(claSignatureInfo);
 
     // Verify that removeLabel was not called
-    expect(app.octokit.rest.issues.removeLabel.called).to.be.false;
+    expect(GitHub.app.octokit.rest.issues.removeLabel.called).to.be.false;
   });
 
   it('should handle errors gracefully', async function() {
     // Mock the response from search.issuesAndPullRequests to throw an error
-    app.octokit.rest.search.issuesAndPullRequests.rejects(new Error('Test error'));
+    GitHub.app.octokit.rest.search.issuesAndPullRequests.rejects(new Error('Test error'));
 
-    // Call the afterCLA function
-    await afterCLA(app, claSignatureInfo);
-
+    try {
+      // Call the afterCLA function
+      await afterCLA(claSignatureInfo);
+      expect.fail('Expected error to be thrown');
+    } catch (error) {
+      expect(error).to.be.an('error');
+      expect(error.message).to.include('CLA verification');
+    }
     // Verify that removeLabel was not called
-    expect(removeLabelStub.called).to.be.false;
+    expect(removeLabelStub.callCount).to.be.equal(0);
   });
 });
