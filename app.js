@@ -13,7 +13,7 @@ import {
   isMessageAfterMergeRequired,
   getWebsiteAddress,
 } from "./src/helpers.js";
-import { DocsAgent } from "./src/services/DocsAgent.js";
+import DocsAgent from "./src/services/DocsAgent.js";
 
 try {
   const packageJson = await import("./package.json", {
