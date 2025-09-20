@@ -13,6 +13,7 @@ import {
   isMessageAfterMergeRequired,
   getWebsiteAddress,
 } from "./src/helpers.js";
+import { DocsAgent } from "./src/services/DocsAgent.js";
 
 try {
   const packageJson = await import("./package.json", {
@@ -111,6 +112,52 @@ GitHub.app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
       console.log("Sending message to the product review channel");
       const message = `:mag: <${pull_request.html_url}|#${pull_request.number}: ${pull_request.title}> by ${pull_request.user?.login}`;
       await Slack.sendMessage(message);
+    }
+    if(label.name?.toLowerCase() === "docs review") {
+      console.log("Processing docs review for this PR");
+      try {
+        const DOCS_REPOS = process.env.DOCS_REPOS?.split(",")?.map((item) => item?.trim()) || [];
+        if(DOCS_REPOS?.length > 0 && !DOCS_REPOS.includes(repository.name)) {
+          throw new Error("Docs agent review is not available for this repository");
+        }
+        if(!DocsAgent.isConfigured()) {
+          throw new Error("Docs agent service is not configured");
+        }
+        console.log("Going to analyze the docs pages in this PR");
+        // Get PR changes
+        const prChanges = await GitHub.getPRChanges(
+          app,
+          repository.owner.login,
+          repository.name,
+          pull_request.number
+        );
+        const docsFiles = prChanges.files.filter((file) => file.filename.endsWith(".md"));
+        console.log(`Found ${docsFiles.length} docs files being changed`);
+        if(docsFiles.length === 0) {
+          throw new Error("No docs files being changed in this PR");
+        }
+        for(const file of docsFiles) {
+          const content = file.content;
+          // Convert relative file path to full remote github file path using PR head commit SHA https://raw.githubusercontent.com/gitcommitshow/rudder-github-app/e14433e76d74dc680b8cf9102d39f31970e8b794/.codesandbox/tasks.json
+          const relativePath = file.filename;
+          const fullPath = `https://raw.githubusercontent.com/${repository.owner.login}/${repository.name}/${prChanges.headCommit}/${relativePath}`;
+          const review = await DocsAgent.reviewDocs(content, fullPath);
+          if(!review) {
+            throw new Error("Failed to review docs file: "+ file.filename);
+          }
+          // Post the affected docs pages comment to the PR
+          await octokit.rest.issues.createComment({
+            owner: repository.owner.login,
+            repo: repository.name,
+            issue_number: pull_request.number,
+            body: review,
+          });
+          console.log(`Successfully posted docs review comment for ${fullPath}`);
+        }
+        console.log(`Successfully posted docs review comments for PR ${repository.name} #${pull_request.number}`);
+      } catch (error) {
+        console.error(error);
+      }
     }
   } catch (error) {
     if (error.response) {
