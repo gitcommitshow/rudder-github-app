@@ -11,26 +11,26 @@ export class DocsAgent {
   /**
    * For comprehensiveness and standardization of the docs
    * @param {*} content 
-   * @param {*} fullPath 
-   * @returns 
+   * @param {*} filepath - complete remote file path
+   * @returns {Promise<string>} - Comment text for the PR
    */
-  reviewDocs(content, fullPath) {
+  async reviewDocs(content, filepath) {
     return this.makeAPICall("/review", {
       content,
-      fullPath,
+      filepath,
     });
   }
 
   /**
    * For technical accuracy of the docs
    * @param {*} content 
-   * @param {*} fullPath 
-   * @returns 
+   * @param {*} filepath - complete remote file path
+   * @returns {Promise<string>} - Comment text for the PR
    */
-  auditDocs(content, fullPath) {
+  async auditDocs(content, filepath) {
     return this.makeAPICall("/audit", {
       content,
-      fullPath,
+      filepath,
     });
   }
 
@@ -46,7 +46,7 @@ export class DocsAgent {
     }
 
     try {
-      const response = await this.makeAPICall(changes);
+      const response = await this.makeAPICall("/getAffectedDocsPages", changes);
       return this.validateResponse(response);
     } catch (error) {
       console.error("External API call failed:", error);
@@ -59,7 +59,7 @@ export class DocsAgent {
    * @param {Object} requestBody - the request body as JSON
    * @returns {Promise<Object>} - API response
    */
-  async makeAPICall(endpoint, requestBody) {
+  async makeAPICall(endpoint, requestBody = {}) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
@@ -97,7 +97,7 @@ export class DocsAgent {
    * @param {Object} response - API response
    * @returns {string} - Comment text
    */
-  validateResponse(response) {
+  validateResponse(response = {}) {
     if (!response) {
       throw new Error("Empty response from external API");
     }
@@ -125,6 +125,7 @@ export class DocsAgent {
    * @returns {boolean} - True if configured
    */
   isConfigured() {
+    console.log("Checking if DocsAgent is configured", this.apiUrl, this.apiKey);
     return !!(this.apiUrl && this.apiKey);
   }
 }
