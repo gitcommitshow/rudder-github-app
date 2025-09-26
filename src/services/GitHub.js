@@ -82,12 +82,15 @@ class GitHub {
    * @returns
    */
   async getOctokitForOrg(org) {
+    if(typeof org !== "string") {
+      throw new Error("Unexpected org type passed to getOctokitForOrg: " + typeof org);
+    }
     if (!this.app) {
       throw new Error("GitHub App is not iniitalized or authenticated");
     }
     // Find the installation for the organization
     for await (const { installation } of this.app?.eachInstallation?.iterator()) {
-      if (installation.account.login.toLowerCase() === org.toLowerCase()) {
+      if (installation.account.login.toLowerCase() === org?.toLowerCase()) {
         // Create an authenticated client for this installation
         const octokit = await this.app.getInstallationOctokit(installation.id);
         return octokit;
