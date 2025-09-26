@@ -69,7 +69,7 @@ export class DocsAgent {
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
     try {
-      const apiUrl = endpoint && endpoint.startsWith("/") ? this.apiUrl + endpoint : this[`${endpoint}`];
+      const apiUrl = (endpoint && endpoint.startsWith("/")) ? (this.apiUrl + endpoint) : endpoint;
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -87,7 +87,19 @@ export class DocsAgent {
         throw new Error(`API request failed with status ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        // Try to parse as JSON, but fallback to text if not possible
+        const text = await response.text();
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          data = text;
+        }
+      }
       return data;
     } catch (error) {
       clearTimeout(timeoutId);
