@@ -126,7 +126,7 @@ GitHub.app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
         console.log("Going to analyze the docs pages in this PR");
         // Get PR changes
         const prChanges = await GitHub.getPRChanges(
-          app,
+          GitHub.app,
           repository.owner.login,
           repository.name,
           pull_request.number
