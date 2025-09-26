@@ -5,6 +5,11 @@ export class DocsAgent {
   constructor() {
     this.apiUrl = process.env.DOCS_AGENT_API_URL;
     this.apiKey = process.env.DOCS_AGENT_API_KEY;
+    this.reviewDocsApiUrl = process.env.DOCS_AGENT_API_REVIEW_URL;
+    this.auditDocsApiUrl = process.env.DOCS_AGENT_API_AUDIT_URL;
+    this.prioritizeDocsApiUrl = process.env.DOCS_AGENT_API_PRIORITIZE_URL;
+    this.editDocsApiUrl = process.env.DOCS_AGENT_API_EDIT_URL;
+    this.linkDocsApiUrl = process.env.DOCS_AGENT_API_LINK_URL;
     this.timeout = parseInt(process.env.DOCS_AGENT_API_TIMEOUT) || 350000; // 5+ minutes default
   }
 
@@ -15,7 +20,7 @@ export class DocsAgent {
    * @returns {Promise<string>} - Comment text for the PR
    */
   async reviewDocs(content, filepath) {
-    return this.makeAPICall("/review", {
+    return this.makeAPICall(this.reviewDocsApiUrl || "/review", {
       content,
       filepath,
     });
@@ -28,7 +33,7 @@ export class DocsAgent {
    * @returns {Promise<string>} - Comment text for the PR
    */
   async auditDocs(content, filepath) {
-    return this.makeAPICall("/audit", {
+    return this.makeAPICall(this.auditDocsApiUrl || "/audit", {
       content,
       filepath,
     });
@@ -64,7 +69,8 @@ export class DocsAgent {
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
     try {
-      const response = await fetch(this.apiUrl + endpoint, {
+      const apiUrl = endpoint && endpoint.startsWith("/") ? this.apiUrl + endpoint : this[`${endpoint}`];
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
