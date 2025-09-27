@@ -34,8 +34,8 @@ describe('Docs Agent Services', function () {
                     owner: 'Git-Commit-Show',
                 },
             });
-            // Wait for 10 seconds to let the webhook be processed
-            new Promise(resolve => setTimeout(resolve, 30000));
+            // Wait for the webhook to be processed
+            await new Promise(resolve => setTimeout(resolve, 10000));
             expect(review).to.not.throw;
             expect(review).to.be.a('string');
             expect(review).to.not.be.empty;
