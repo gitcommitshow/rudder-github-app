@@ -19,10 +19,12 @@ export class DocsAgent {
    * @param {*} filepath - complete remote file path
    * @returns {Promise<string>} - Comment text for the PR
    */
-  async reviewDocs(content, filepath) {
+  async reviewDocs(content, filepath, webhookInfoForResults) {
     return this.makeAPICall(this.reviewDocsApiUrl || "/review", {
       content,
       filepath,
+      webhookUrl: webhookInfoForResults?.webhookUrl,
+      webhookMetadata: webhookInfoForResults?.webhookMetadata,
     });
   }
 
@@ -32,10 +34,12 @@ export class DocsAgent {
    * @param {*} filepath - complete remote file path
    * @returns {Promise<string>} - Comment text for the PR
    */
-  async auditDocs(content, filepath) {
+  async auditDocs(content, filepath, webhookInfoForResults) {
     return this.makeAPICall(this.auditDocsApiUrl || "/audit", {
       content,
       filepath,
+      webhookUrl: webhookInfoForResults?.webhookUrl,
+      webhookMetadata: webhookInfoForResults?.webhookMetadata,
     });
   }
 
@@ -44,14 +48,14 @@ export class DocsAgent {
    * @param {Object} changes - Formatted PR changes
    * @returns {Promise<string>} - Comment text for the PR
    */
-  async getAffectedDocsPages(changes) {
+  async getAffectedDocsPages(changes, webhookInfoForResults) {
     throw new Error("Not implemented");
     if (!this.apiUrl || !this.apiKey) {
       throw new Error("External API configuration missing. Please set EXTERNAL_API_URL and EXTERNAL_API_KEY environment variables.");
     }
 
     try {
-      const response = await this.makeAPICall("/getAffectedDocsPages", changes);
+      const response = await this.makeAPICall("/getAffectedDocsPages", changes, webhookInfoForResults);
       return this.validateResponse(response);
     } catch (error) {
       console.error("External API call failed:", error);

@@ -780,7 +780,25 @@ async isAllowedToWriteToTheRepo(octokit, username, owner, repo) {
   }
 }
 
-
+  /**
+   * Add a comment to a GitHub issue or PR
+   * @param {string} owner - Repository owner
+   * @param {string} repo - Repository name
+   * @param {number} issue_number - Issue number
+   * @param {string} result - Comment body
+   */
+  async addCommentToIssueOrPR(owner, repo, issue_number, result) {
+    if(!owner || !repo || !issue_number || !result) {
+      throw new Error("Please add owner, repo, issue_number and result parameters in order to add a comment to a GitHub issue or PR");
+    }
+    const octokit = await this.getOctokitForOrg(owner);
+    await octokit.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number,
+      body: result,
+    });
+  }
 }
 
 export default new GitHub();

@@ -140,18 +140,16 @@ GitHub.app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
           // Convert relative file path to full remote github file path using PR head commit SHA https://raw.githubusercontent.com/gitcommitshow/rudder-github-app/e14433e76d74dc680b8cf9102d39f31970e8b794/.codesandbox/tasks.json
           const relativePath = file.filename;
           const fullPath = `https://raw.githubusercontent.com/${repository.owner.login}/${repository.name}/${prChanges.headCommit}/${relativePath}`;
-          const review = await DocsAgent.reviewDocs(content, fullPath);
-          if(!review) {
-            throw new Error("Failed to review docs file: "+ file.filename);
-          }
-          // Post the affected docs pages comment to the PR
-          await octokit.rest.issues.createComment({
-            owner: repository.owner.login,
-            repo: repository.name,
-            issue_number: pull_request.number,
-            body: review,
+          const webhookUrl = getWebsiteAddress() + "/api/comment";
+          DocsAgent.reviewDocs(content, fullPath, {
+            webhookUrl: webhookUrl,
+            webhookMetadata: {
+              issue_number: pull_request.number,
+              repo: repository.name,
+              owner: repository.owner.login,
+            },
           });
-          console.log(`Successfully posted docs review comment for ${fullPath}`);
+          console.log(`Successfully started docs review for ${fullPath}, results will be handled by webhook: ${webhookUrl}`);
         }
         console.log(`Successfully posted docs review comments for PR ${repository.name} #${pull_request.number}`);
       } catch (error) {
@@ -261,6 +259,9 @@ const server = http
     switch (req.method + " " + pathWithoutQuery) {
       case "POST /api/webhook":
         githubWebhookRequestHandler(req, res);
+        break;
+      case "POST /api/comment":
+        routes.addCommentToGitHubIssueOrPR(req, res);
         break;
       case "GET /":
         routes.home(req, res);
