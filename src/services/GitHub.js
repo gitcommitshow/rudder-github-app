@@ -82,12 +82,15 @@ class GitHub {
    * @returns
    */
   async getOctokitForOrg(org) {
+    if(typeof org !== "string") {
+      throw new Error("Unexpected org type passed to getOctokitForOrg: " + typeof org);
+    }
     if (!this.app) {
       throw new Error("GitHub App is not iniitalized or authenticated");
     }
     // Find the installation for the organization
     for await (const { installation } of this.app?.eachInstallation?.iterator()) {
-      if (installation.account.login.toLowerCase() === org.toLowerCase()) {
+      if (installation.account.login.toLowerCase() === org?.toLowerCase()) {
         // Create an authenticated client for this installation
         const octokit = await this.app.getInstallationOctokit(installation.id);
         return octokit;
@@ -777,7 +780,25 @@ async isAllowedToWriteToTheRepo(octokit, username, owner, repo) {
   }
 }
 
-
+  /**
+   * Add a comment to a GitHub issue or PR
+   * @param {string} owner - Repository owner
+   * @param {string} repo - Repository name
+   * @param {number} issue_number - Issue number
+   * @param {string} result - Comment body
+   */
+  async addCommentToIssueOrPR(owner, repo, issue_number, result) {
+    if(!owner || !repo || !issue_number || !result) {
+      throw new Error("Please add owner, repo, issue_number and result parameters in order to add a comment to a GitHub issue or PR");
+    }
+    const octokit = await this.getOctokitForOrg(owner);
+    await octokit.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number,
+      body: result,
+    });
+  }
 }
 
 export default new GitHub();
