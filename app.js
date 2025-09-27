@@ -151,7 +151,7 @@ GitHub.app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
           });
           console.log(`Successfully started docs review for ${fullPath}, results will be handled by webhook: ${webhookUrl}`);
         }
-        console.log(`Successfully posted docs review comments for PR ${repository.name} #${pull_request.number}`);
+        console.log(`Successfully started all necessary docs reviews for PR ${repository.name} #${pull_request.number}`);
       } catch (error) {
         console.error(error);
       }
