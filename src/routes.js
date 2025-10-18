@@ -385,6 +385,13 @@ export const routes = {
     res.writeHead(200, { "Content-Type": "text/html" });
     res.write("Cache cleared");
   },
+
+  /**
+   * Add a comment to a GitHub issue or PR
+   * // Request body: { owner, repo, issue_number, result }
+   * // Response: 200 OK if comment added successfully, 400 Bad Request if request body is invalid, 500 Internal Server Error if failed to add comment
+   * // Response body: "Comment added to GitHub issue or PR" if comment added successfully, "Failed to add comment to GitHub issue or PR" if failed to add comment
+   */
   async addCommentToGitHubIssueOrPR(req, res) {
     let body = "";
     req.on("data", (chunk) => {

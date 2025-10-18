@@ -140,7 +140,7 @@ GitHub.app.webhooks.on("pull_request.labeled", async ({ octokit, payload }) => {
           // Convert relative file path to full remote github file path using PR head commit SHA https://raw.githubusercontent.com/gitcommitshow/rudder-github-app/e14433e76d74dc680b8cf9102d39f31970e8b794/.codesandbox/tasks.json
           const relativePath = file.filename;
           const fullPath = `https://raw.githubusercontent.com/${repository.owner.login}/${repository.name}/${prChanges.headCommit}/${relativePath}`;
-          const webhookUrl = getWebsiteAddress() + "/api/comment";//TODO: add this url to `ALLOWED_WEBHOOK_URLS` env of docs-agent project
+          const webhookUrl = process.env.API_POST_GITHUB_COMMENT || (getWebsiteAddress() + "/api/comment");//TODO: add this url to `ALLOWED_WEBHOOK_URLS` env of docs-agent project
           DocsAgent.reviewDocs(content, fullPath, {
             webhookUrl: webhookUrl,
             webhookMetadata: {
