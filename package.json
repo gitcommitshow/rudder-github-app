@@ -6,9 +6,9 @@
   "type": "module",
   "scripts": {
     "lint": "standard",
-    "proxy": "PORT=3000 & ./node_modules/.bin/smee -u $SMEE_URL -t https://$HOSTNAME-3000.csb.app/api/webhook",
+    "proxy": "./node_modules/.bin/smee -u $SMEE_URL -t https://$HOSTNAME-3000.csb.app/api/webhook & ./node_modules/.bin/smee -u $API_POST_GITHUB_COMMENT -t https://$HOSTNAME-3000.csb.app/api/comment",
     "start": "node app.js",
-    "staging": "npm run proxy & npm start",
+    "staging": "npm run proxy & PORT=3000 npm start",
     "test": "RUN_E2E_TESTS=true ./node_modules/.bin/mocha test/lifecycle.test.js test/**/*.test.js",
     "test:integration": "./node_modules/.bin/mocha test/lifecycle.test.js test/integration/**/*.test.js",
     "test:e2e": "RUN_E2E_TESTS=true ./node_modules/.bin/mocha test/lifecycle.test.js test/e2e/**/*.test.js"

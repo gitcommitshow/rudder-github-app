@@ -385,6 +385,47 @@ export const routes = {
     res.writeHead(200, { "Content-Type": "text/html" });
     res.write("Cache cleared");
   },
+
+  /**
+   * Add a comment to a GitHub issue or PR
+   * // Request body: { owner, repo, issue_number, result }
+   * // Response: 200 OK if comment added successfully, 400 Bad Request if request body is invalid, 500 Internal Server Error if failed to add comment
+   * // Response body: "Comment added to GitHub issue or PR" if comment added successfully, "Failed to add comment to GitHub issue or PR" if failed to add comment
+   */
+  async addCommentToGitHubIssueOrPR(req, res) {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk.toString(); // convert Buffer to string
+    });
+
+    req.on("end", async () => {
+      let bodyJson = null;
+      try {
+        bodyJson = JSON.parse(body) || {};
+      } catch (err) {
+        res.writeHead(400);
+        return res.end("Please add owner, repo, issue_number and result parameters in the request body in order to add a comment to a GitHub issue or PR");
+      }
+      const owner = sanitizeInput(bodyJson.owner);
+      const repo = sanitizeInput(bodyJson.repo);
+      const issue_number = bodyJson.issue_number;
+      const result = bodyJson.result;
+      if (!owner || !repo || !issue_number || !result) {
+        res.writeHead(400);
+        return res.end("Please add owner, repo, issue_number and result parameters in the request body in order to add a comment to a GitHub issue or PR");
+      }
+      try {
+        console.log("Adding comment to ", owner, repo, "issue/PR #",issue_number);
+        await GitHub.addCommentToIssueOrPR(owner, repo, issue_number, result);
+        res.writeHead(200);
+        res.write("Comment added to GitHub issue or PR");
+        return res.end();
+      } catch (err) {
+        res.writeHead(500);
+        return res.end("Failed to add comment to GitHub issue or PR");
+      }
+    });
+  },
   // ${!Array.isArray(prs) || prs?.length < 1 ? "No contributions found! (Might be an access issue)" : prs?.map(pr => `<li><a href="${pr?.user?.html_url}">${pr?.user?.login}</a> contributed a PR - <a href="${pr?.html_url}" target="_blank">${pr?.title}</a> [${pr?.labels?.map(label => label?.name).join('] [')}]  <small>updated ${timeAgo(pr?.updated_at)}</small></li>`).join('')}
   default(req, res) {
     res.writeHead(404);
