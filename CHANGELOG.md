@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/gitcommitshow/rudder-github-app/compare/v0.9.0...v0.10.0) (2025-10-18)
+
+
+### Features
+
+* docs agent api integration ([#95](https://github.com/gitcommitshow/rudder-github-app/issues/95)) ([615d7ef](https://github.com/gitcommitshow/rudder-github-app/commit/615d7ef7be36022e57d20ba8088d57ae471df0dd))
+
 ## [0.9.0](https://github.com/gitcommitshow/rudder-github-app/compare/v0.8.0...v0.9.0) (2025-09-19)
 
 
