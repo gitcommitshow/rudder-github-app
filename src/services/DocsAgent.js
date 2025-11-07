@@ -1,5 +1,10 @@
 /**
- * Service for interacting with external APIs to get next actions
+ * Service for interacting with docs agent external APIs to get next actions
+ * 
+ * @example
+ * const docsAgent = new DocsAgent();
+ * const result = await docsAgent.reviewDocs("content", "filepath", { webhookUrl: "webhookUrl", webhookMetadata: { owner: "owner", repo: "repo", issue_number: "issue_number" } });
+ * console.log(result);
  */
 export class DocsAgent {
   constructor() {
