@@ -14,6 +14,7 @@ import {
   getWebsiteAddress,
 } from "./src/helpers.js";
 import DocsAgent from "./src/services/DocsAgent.js";
+import { validateApiKey } from "./src/auth.js";
 
 try {
   const packageJson = await import("./package.json", {
@@ -261,6 +262,11 @@ const server = http
         githubWebhookRequestHandler(req, res);
         break;
       case "POST /api/comment":
+        if (!validateApiKey(req)) {
+          res.writeHead(401);
+          res.write("API key required");
+          return res.end();
+        }
         routes.addCommentToGitHubIssueOrPR(req, res);
         break;
       case "GET /":

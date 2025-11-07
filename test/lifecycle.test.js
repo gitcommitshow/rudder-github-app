@@ -12,6 +12,11 @@ before(async function () {
 
     if (process.env.RUN_E2E_TESTS === 'true') {
         try {
+
+            if (!process.env.API_KEY) {
+                process.env.API_KEY = 'test-api-key';
+            }
+
             appProcess = spawn('node', ['app.js'], {
                 env: { ...process.env, NODE_ENV: 'test' },
                 stdio: 'pipe'

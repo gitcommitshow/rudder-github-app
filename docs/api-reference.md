@@ -10,9 +10,19 @@ The API is served from the configured domain (set via `WEBSITE_ADDRESS` environm
 
 Most endpoints do not require authentication. However, some endpoints require specific authentication:
 
+- **API endpoints**: Require API key authentication via request header (using `API_KEY` environment variable)
 - **Download endpoints**: Require username/password authentication via request body (using `LOGIN_USER` and `LOGIN_PASSWORD` environment variables)
 - **GitHub webhook endpoints**: Use GitHub webhook secret for verification
 - **GitHub API interactions**: Use GitHub App authentication
+
+### API Key Authentication
+
+For endpoints requiring API key authentication, include one of the following headers:
+
+- `X-API-Key: <your-api-key>`
+- `Authorization: Bearer <your-api-key>`
+
+The API key must match the value set in the `API_KEY` environment variable. If the API key is missing or invalid, the endpoint will return `401 Unauthorized`.
 
 ## Endpoints
 
@@ -42,7 +52,7 @@ GitHub webhook endpoint for receiving GitHub events.
 - `issues.opened`: Adds welcome comment to new issues
 - `push`: Logs push events
 
-**Note**: For "docs review" label, the app integrates with DocsAgent service if configured. This is limited to repositories specified in the `DOCS_REPOS` environment variable.
+**Note**: For "docs review" label, the app integrates with DocsAgent service if configured. This is limited to repositories specified in the `DOCS_REPOS` environment variable. The DocsAgent service uses the `API_POST_GITHUB_COMMENT` environment variable (or defaults to `WEBSITE_ADDRESS/api/comment`) to post review results back to GitHub.
 
 ---
 
@@ -208,6 +218,8 @@ Adds a comment to a GitHub issue or pull request.
 
 **Description**: Adds a comment to a specified GitHub issue or PR (used by external services like docs agent).
 
+**Authentication**: Requires API key authentication via `X-API-Key` or `Authorization: Bearer <key>` header.
+
 **Request Body** (JSON):
 ```json
 {
@@ -221,12 +233,14 @@ Adds a comment to a GitHub issue or pull request.
 **Response**:
 - `200 OK`: "Comment added to GitHub issue or PR"
 - `400 Bad Request`: Missing required parameters
+- `401 Unauthorized`: API key missing or invalid
 - `500 Internal Server Error`: Failed to add comment
 
 **Example**:
 ```bash
 curl -X POST http://localhost:3000/api/comment \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
   -d '{"owner":"myorg","repo":"myrepo","issue_number":123,"result":"Review completed"}'
 ```
 
@@ -283,6 +297,9 @@ The following environment variables affect API behavior:
 - `WEBHOOK_SECRET`: GitHub webhook secret for verification
 - `ENTERPRISE_HOSTNAME`: GitHub Enterprise hostname (if applicable)
 
+### API Authentication
+- `API_KEY`: API key for protecting API endpoints (e.g., `/api/comment`)
+
 ### Download Endpoint Authentication
 - `LOGIN_USER`: Username for download authentication
 - `LOGIN_PASSWORD`: Password for download authentication
@@ -297,6 +314,7 @@ The following environment variables affect API behavior:
 - `DOCS_AGENT_API_LINK_URL`: URL for docs linking endpoint
 - `DOCS_AGENT_API_TIMEOUT`: Timeout for DocsAgent API calls (default: 350000ms)
 - `DOCS_REPOS`: Comma-separated list of repositories eligible for docs review
+- `API_POST_GITHUB_COMMENT`: Webhook URL for DocsAgent to post result back to (defaults to `our WEBSITE_ADDRESS/api/comment` where we have configured github issue/pr comments). Allows use case to use a proxy url for this webhook url in staging server.
 
 ### Development & Deployment
 - `DEFAULT_GITHUB_ORG`: Default GitHub organization
@@ -306,3 +324,6 @@ The following environment variables affect API behavior:
 - `CODESANDBOX_HOST`: CodeSandbox host (for staging environments)
 - `HOSTNAME`: Hostname for the application
 - `SMEE_URL`: Smee proxy URL for local development
+
+### Slack Integration
+- `SLACK_DEFAULT_MESSAGE_CHANNEL_WEBHOOK_URL`: Slack webhook URL for sending notifications when PRs are labeled with "product review"
