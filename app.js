@@ -10,6 +10,7 @@ import Slack from "./src/services/Slack.js";
 import {
   getMessage,
   isCLARequired,
+  getCLASignature,
   isMessageAfterMergeRequired,
   getWebsiteAddress,
 } from "./src/helpers.js";
@@ -67,7 +68,19 @@ GitHub.app.webhooks.on("pull_request.opened", async ({ octokit, payload }) => {
       console.log("CLA not required for this PR");
       return;
     }
-    // If the user is not a member of the organization and haven't yet signed CLA,
+    // CLA is required for this PR, check if the user has already signed the CLA
+    const claSignature = getCLASignature(payload.pull_request.user.login);
+    if(claSignature) {
+      console.log("CLA already signed by this user");
+      octokit.rest.issues.addLabels({
+        owner: payload.repository.owner.login,
+        repo: payload.repository.name,
+        issue_number: payload.pull_request.number,
+        labels: ["CLA Signed"],
+      });
+      return;
+    }
+    // The user is not a member of the organization and haven't yet signed CLA,
     // Add a label to the PR
     octokit.rest.issues.addLabels({
       owner: payload.repository.owner.login,

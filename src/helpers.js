@@ -53,8 +53,16 @@ export function isCLARequired(pullRequest) {
     console.log("This PR is an internal contribution. So no CLA required.");
     return false;
   }
+  return true;
+}
+
+export function isCLAPending(pullRequest) {
+  if (!isCLARequired(pullRequest)) {
+    console.log("CLA is not required for this PR. So no CLA pending.");
+    return false;
+  }
   if (isCLASigned(pullRequest.user.login)) {
-    console.log("Author signed CLA already. So no CLA required.");
+    console.log("Author signed CLA already. So no CLA pending.");
     return false;
   }
   return true;
@@ -262,11 +270,15 @@ export function getMessage(name, context) {
 
 export function isCLASigned(username) {
   if (!username) return;
+  const claSignature = getCLASignature(username);
+  return claSignature ? true : false;
+}
+
+export function getCLASignature(username) {
+  if (!username) return;
+  //TODO: Ensure the data is sorted by serverTimestamp in descending order
   const userData = storage.get({ username: username, terms: "on" });
-  if (userData?.length > 0) {
-    return true;
-  }
-  return false;
+  return userData?.length > 0 ? userData[0] : null;
 }
 
 export function jsonToCSV(arr) {
