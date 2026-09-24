@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/gitcommitshow/rudder-github-app/compare/v0.11.0...v0.12.0) (2026-09-24)
+
+
+### Features
+
+* add cla signed label ([#106](https://github.com/gitcommitshow/rudder-github-app/issues/106)) ([b286b44](https://github.com/gitcommitshow/rudder-github-app/commit/b286b441ee8cebcecab3a5d429c81c5803402cc3))
+
 ## [0.11.0](https://github.com/gitcommitshow/rudder-github-app/compare/v0.10.0...v0.11.0) (2025-11-07)
 
 
